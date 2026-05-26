@@ -115,6 +115,56 @@ st.markdown("""
         border: 1px solid #f0b27a;
     }
     footer {visibility: hidden;}
+    .testimonial-section {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        flex-wrap: wrap;
+        margin: 1.5rem 0;
+    }
+    .testimonial-card {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 1.2rem;
+        max-width: 280px;
+        text-align: center;
+        border: 1px solid #e8e8e8;
+    }
+    .testimonial-card img {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-bottom: 0.5rem;
+    }
+    .testimonial-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: #e67e22;
+        color: white;
+        font-size: 1.5rem;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 0.5rem auto;
+    }
+    .testimonial-card p {
+        font-size: 0.9rem;
+        color: #555;
+        font-style: italic;
+        margin-bottom: 0.5rem;
+    }
+    .testimonial-card .name {
+        font-weight: bold;
+        color: #333;
+        font-size: 0.85rem;
+    }
+    .testimonial-card .role {
+        color: #888;
+        font-size: 0.75rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -186,6 +236,26 @@ else:
         'Usos gratuitos agotados — <strong>Contacta para acceso completo</strong></div>',
         unsafe_allow_html=True
     )
+
+# ============================================================
+# TESTIMONIOS
+# ============================================================
+st.markdown("""
+<div class="testimonial-section">
+    <div class="testimonial-card">
+        <div class="testimonial-avatar">S</div>
+        <p>"Antes me tomaba toda la tarde copiar las casillas del 621. Ahora subo los PDFs y en segundos tengo todo en Excel."</p>
+        <div class="name">Sandra M.</div>
+        <div class="role">Contadora independiente</div>
+    </div>
+    <div class="testimonial-card">
+        <div class="testimonial-avatar">R</div>
+        <p>"Lo mejor es que puedo subir un ZIP con todos los meses y me consolida todo de una. Muy práctico."</p>
+        <div class="name">Ricardo M.</div>
+        <div class="role">Estudio contable</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # ============================================================
 # TABS PRINCIPALES
