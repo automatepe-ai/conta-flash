@@ -7,6 +7,9 @@ __pycache__/
 venv/
 .env
 
+# Streamlit secrets (NUNCA subir — contiene códigos Pro)
+.streamlit/secrets.toml
+
 # OS
 .DS_Store
 Thumbs.db

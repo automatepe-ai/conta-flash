@@ -17,26 +17,58 @@ st.set_page_config(
 )
 
 # ============================================================
-# CONTROL DE USO FREEMIUM (cookie-based via query params)
+# CONTROL DE USO FREEMIUM + CÓDIGOS PRO
 # ============================================================
 MAX_FREE_USES = 3
 USAGE_KEY = "contaflash_usage_count"
+PRO_KEY = "contaflash_pro_active"
+PRO_CLIENT_KEY = "contaflash_pro_client"
 
 if USAGE_KEY not in st.session_state:
     st.session_state[USAGE_KEY] = 0
+if PRO_KEY not in st.session_state:
+    st.session_state[PRO_KEY] = False
+if PRO_CLIENT_KEY not in st.session_state:
+    st.session_state[PRO_CLIENT_KEY] = ""
+
+
+def _get_pro_codes() -> dict:
+    """Lee códigos Pro desde st.secrets. Retorna {codigo: nombre_cliente}."""
+    try:
+        return dict(st.secrets.get("pro_codes", {}))
+    except Exception:
+        return {}
+
+
+def validate_pro_code(code: str) -> tuple[bool, str]:
+    """Valida un código Pro. Retorna (es_valido, nombre_cliente)."""
+    pro_codes = _get_pro_codes()
+    code = code.strip()
+    if code in pro_codes:
+        return True, pro_codes[code]
+    return False, ""
+
+
+def is_pro() -> bool:
+    return st.session_state[PRO_KEY]
 
 
 def check_usage() -> bool:
     """Retorna True si el usuario puede usar la herramienta."""
+    if is_pro():
+        return True
     return st.session_state[USAGE_KEY] < MAX_FREE_USES
 
 
 def increment_usage():
-    """Incrementa el contador de uso."""
-    st.session_state[USAGE_KEY] += 1
+    """Incrementa el contador de uso (solo para usuarios free)."""
+    if not is_pro():
+        st.session_state[USAGE_KEY] += 1
 
 
 def remaining_uses() -> int:
+    if is_pro():
+        return -1  # ilimitado
     return MAX_FREE_USES - st.session_state[USAGE_KEY]
 
 
@@ -88,6 +120,42 @@ st.markdown("""
 
 
 # ============================================================
+# SIDEBAR: CÓDIGO PRO
+# ============================================================
+with st.sidebar:
+    st.markdown("### 🔑 Acceso Pro")
+    if is_pro():
+        st.success(f"✅ Plan Pro activo — {st.session_state[PRO_CLIENT_KEY]}")
+        if st.button("Cerrar sesión Pro"):
+            st.session_state[PRO_KEY] = False
+            st.session_state[PRO_CLIENT_KEY] = ""
+            st.rerun()
+    else:
+        st.markdown("¿Ya tienes un código Pro? Ingrésalo aquí:")
+        pro_input = st.text_input(
+            "Código Pro",
+            type="password",
+            placeholder="Ej: CF-XXXX-XXXX",
+            key="pro_code_input",
+        )
+        if st.button("Activar", key="btn_activate_pro"):
+            if pro_input:
+                valid, client_name = validate_pro_code(pro_input)
+                if valid:
+                    st.session_state[PRO_KEY] = True
+                    st.session_state[PRO_CLIENT_KEY] = client_name
+                    st.rerun()
+                else:
+                    st.error("Código inválido. Verifica e intenta de nuevo.")
+            else:
+                st.warning("Ingresa tu código Pro.")
+        st.markdown("---")
+        st.markdown(
+            "**¿Quieres acceso ilimitado?**\n\n"
+            "📱 [Contactar por WhatsApp](https://wa.me/51962927872?text=Hola%2C+quiero+un+código+Pro+de+ContaFlash)"
+        )
+
+# ============================================================
 # HEADER
 # ============================================================
 st.markdown("""
@@ -99,7 +167,13 @@ st.markdown("""
 
 # Mostrar usos restantes
 uses_left = remaining_uses()
-if uses_left > 0:
+if is_pro():
+    st.markdown(
+        '<div class="usage-badge" style="background:#eafaf1">'
+        '⚡ <strong style="color:#27ae60">Plan Pro — Uso ilimitado</strong></div>',
+        unsafe_allow_html=True
+    )
+elif uses_left > 0:
     color = "#27ae60" if uses_left > 1 else "#e67e22"
     st.markdown(
         f'<div class="usage-badge">Usos gratuitos restantes: '
