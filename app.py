@@ -267,6 +267,11 @@ with tab_pdf:
                         type="primary",
                     )
                     st.success(f"✅ Listo — {stats['ok']} declaración(es) extraída(s). Te quedan {remaining_uses()} uso(s) gratuito(s).")
+                    st.markdown(
+                        '💡 **¿Tienes otra tarea contable que te quite horas?** '
+                        'Cuéntanos y te proponemos una solución. '
+                        '[Escríbenos por WhatsApp](https://wa.me/51962927872?text=Hola%2C+uso+ContaFlash+y+tengo+otra+tarea+que+me+quita+tiempo%3A+)'
+                    )
                 else:
                     st.error("No se pudieron extraer datos de los archivos proporcionados.")
 
@@ -346,8 +351,14 @@ with tab_excel:
                         type="primary",
                     )
                     st.success(f"✅ Listo — {stats['ok']} registro(s) consolidado(s). Te quedan {remaining_uses()} uso(s) gratuito(s).")
+                    st.markdown(
+                        '💡 **¿Tienes otra tarea contable que te quite horas?** '
+                        'Cuéntanos y te proponemos una solución. '
+                        '[Escríbenos por WhatsApp](https://wa.me/51962927872?text=Hola%2C+uso+ContaFlash+y+tengo+otra+tarea+que+me+quita+tiempo%3A+)'
+                    )
                 else:
                     st.error("No se pudo consolidar. Verifica que los archivos tengan columnas 'Nro Casilla' y 'Valor Casilla'.")
+
 
 
 # ─────────────────────────────────────────────────────────
