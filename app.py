@@ -248,12 +248,6 @@ st.markdown("""
         <div class="name">Sandra M.</div>
         <div class="role">Contadora independiente</div>
     </div>
-    <div class="testimonial-card">
-        <div class="testimonial-avatar">R</div>
-        <p>"Lo mejor es que puedo subir un ZIP con todos los meses y me consolida todo de una. Muy práctico."</p>
-        <div class="name">Ricardo M.</div>
-        <div class="role">Estudio contable</div>
-    </div>
 </div>
 """, unsafe_allow_html=True)
 
