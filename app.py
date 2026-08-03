@@ -4,6 +4,7 @@ Web app para extracción y consolidación de declaraciones SUNAT.
 """
 
 import streamlit as st
+from streamlit_local_storage import LocalStorage
 from extractor import process_uploaded_pdfs, consolidate_uploaded_excels
 
 # ============================================================
@@ -30,6 +31,33 @@ if PRO_KEY not in st.session_state:
     st.session_state[PRO_KEY] = False
 if PRO_CLIENT_KEY not in st.session_state:
     st.session_state[PRO_CLIENT_KEY] = ""
+
+# ============================================================
+# PERSISTENCIA — localStorage
+# ============================================================
+_local_storage = LocalStorage()
+PERSIST_KEY = "contaflash_state"
+
+
+def _load_state():
+    """Restaura estado desde localStorage al iniciar."""
+    saved = _local_storage.getItem(PERSIST_KEY)
+    if saved:
+        st.session_state[USAGE_KEY] = saved.get("usage", 0)
+        st.session_state[PRO_KEY] = saved.get("pro", False)
+        st.session_state[PRO_CLIENT_KEY] = saved.get("client", "")
+
+
+def _save_state():
+    """Persiste estado actual a localStorage."""
+    _local_storage.setItem(PERSIST_KEY, {
+        "usage": st.session_state[USAGE_KEY],
+        "pro": st.session_state[PRO_KEY],
+        "client": st.session_state[PRO_CLIENT_KEY],
+    })
+
+
+_load_state()
 
 
 def _get_pro_codes() -> dict:
@@ -64,6 +92,7 @@ def increment_usage():
     """Incrementa el contador de uso (solo para usuarios free)."""
     if not is_pro():
         st.session_state[USAGE_KEY] += 1
+        _save_state()
 
 
 def remaining_uses() -> int:
@@ -179,6 +208,7 @@ with st.sidebar:
         if st.button("Cerrar sesión Pro"):
             st.session_state[PRO_KEY] = False
             st.session_state[PRO_CLIENT_KEY] = ""
+            _save_state()
             st.rerun()
     else:
         st.markdown("¿Ya tienes un código Pro? Ingrésalo aquí:")
@@ -194,6 +224,7 @@ with st.sidebar:
                 if valid:
                     st.session_state[PRO_KEY] = True
                     st.session_state[PRO_CLIENT_KEY] = client_name
+                    _save_state()
                     st.rerun()
                 else:
                     st.error("Código inválido. Verifica e intenta de nuevo.")
