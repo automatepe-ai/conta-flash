@@ -340,18 +340,57 @@ with tab_pdf:
                 if excel_bytes:
                     increment_usage()
 
-                    # Stats
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric("Procesados", f"{stats['ok']}")
-                    with col2:
-                        st.metric("Errores", f"{stats['errors']}")
-                    with col3:
-                        n_periodos = len(stats.get('periodos', []))
-                        st.metric("Períodos", f"{n_periodos}")
+                    # Panel de resultados
+                    n_formularios = stats['ok']
+                    n_casillas = stats.get('n_casillas', 0)
+                    n_periodos = len(stats.get('periodos', []))
+                    n_empresas = len(stats.get('empresas', []))
+                    n_errores = stats['errors']
+                    tiempo_ahorrado_min = n_formularios * 30
+                    horas = tiempo_ahorrado_min // 60
+                    minutos = tiempo_ahorrado_min % 60
+                    tiempo_str = f"{horas}h {minutos}min" if horas > 0 else f"{minutos}min"
 
-                    if stats.get('periodos'):
-                        st.caption(f"Períodos: {', '.join(stats['periodos'])}")
+                    st.markdown(f"""
+                    <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);
+                                border-radius:16px;padding:2rem;margin:1rem 0;color:white;">
+                        <div style="text-align:center;margin-bottom:1.5rem;">
+                            <span style="font-size:2.5rem;">✅</span>
+                            <h2 style="color:#e67e22;margin:0.5rem 0 0 0;">Procesamiento completado</h2>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;">
+                            <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
+                                <div style="font-size:2rem;font-weight:bold;color:#e67e22;">{n_formularios}</div>
+                                <div style="font-size:0.85rem;opacity:0.8;">Formularios</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
+                                <div style="font-size:2rem;font-weight:bold;color:#2ecc71;">{n_casillas}</div>
+                                <div style="font-size:0.85rem;opacity:0.8;">Registros extraídos</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
+                                <div style="font-size:2rem;font-weight:bold;color:#3498db;">{n_empresas}</div>
+                                <div style="font-size:0.85rem;opacity:0.8;">Empresas</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
+                                <div style="font-size:2rem;font-weight:bold;color:#9b59b6;">{n_periodos}</div>
+                                <div style="font-size:0.85rem;opacity:0.8;">Períodos</div>
+                            </div>
+                        </div>
+                        <div style="background:rgba(46,204,113,0.15);border-radius:12px;padding:1rem;margin-top:1rem;text-align:center;">
+                            <div style="font-size:0.9rem;opacity:0.8;">Tiempo estimado ahorrado</div>
+                            <div style="font-size:1.8rem;font-weight:bold;color:#2ecc71;">⏱️ {tiempo_str}</div>
+                            <div style="font-size:0.8rem;opacity:0.6;">vs ~30 min por declaración manual</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    if n_errores > 0:
+                        st.warning(f"⚠️ {n_errores} archivo(s) con errores — revisa el detalle abajo")
+
+                    # Logs
+                    with st.expander("📋 Detalle del procesamiento", expanded=False):
+                        for log_line in logs:
+                            st.text(log_line)
 
                     # Botón descarga
                     st.download_button(
@@ -361,7 +400,7 @@ with tab_pdf:
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         type="primary",
                     )
-                    st.success(f"✅ Listo — {stats['ok']} declaración(es) extraída(s). Te quedan {remaining_uses()} uso(s) gratuito(s).")
+                    st.success(f"✅ Te quedan {remaining_uses()} uso(s) gratuito(s).")
                     st.markdown(
                         '💡 **¿Tienes otra tarea contable que te quite horas?** '
                         'Cuéntanos y te proponemos una solución. '
@@ -427,16 +466,57 @@ with tab_excel:
                 if excel_bytes:
                     increment_usage()
 
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric("Procesados", f"{stats['ok']}")
-                    with col2:
-                        st.metric("Errores", f"{stats['errors']}")
-                    with col3:
-                        st.metric("Empresas", f"{stats.get('empresas', 1)}")
+                    # Panel de resultados
+                    n_formularios = stats['ok']
+                    n_casillas = stats.get('n_casillas', 0)
+                    n_periodos = len(stats.get('periodos', []))
+                    n_empresas = stats.get('empresas', 1)
+                    n_errores = stats['errors']
+                    tiempo_ahorrado_min = n_formularios * 30
+                    horas = tiempo_ahorrado_min // 60
+                    minutos = tiempo_ahorrado_min % 60
+                    tiempo_str = f"{horas}h {minutos}min" if horas > 0 else f"{minutos}min"
 
-                    if stats.get('periodos'):
-                        st.caption(f"Períodos: {', '.join(stats['periodos'])}")
+                    st.markdown(f"""
+                    <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);
+                                border-radius:16px;padding:2rem;margin:1rem 0;color:white;">
+                        <div style="text-align:center;margin-bottom:1.5rem;">
+                            <span style="font-size:2.5rem;">✅</span>
+                            <h2 style="color:#e67e22;margin:0.5rem 0 0 0;">Consolidación completada</h2>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;">
+                            <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
+                                <div style="font-size:2rem;font-weight:bold;color:#e67e22;">{n_formularios}</div>
+                                <div style="font-size:0.85rem;opacity:0.8;">Formularios</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
+                                <div style="font-size:2rem;font-weight:bold;color:#2ecc71;">{n_casillas}</div>
+                                <div style="font-size:0.85rem;opacity:0.8;">Registros extraídos</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
+                                <div style="font-size:2rem;font-weight:bold;color:#3498db;">{n_empresas}</div>
+                                <div style="font-size:0.85rem;opacity:0.8;">Empresas</div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
+                                <div style="font-size:2rem;font-weight:bold;color:#9b59b6;">{n_periodos}</div>
+                                <div style="font-size:0.85rem;opacity:0.8;">Períodos</div>
+                            </div>
+                        </div>
+                        <div style="background:rgba(46,204,113,0.15);border-radius:12px;padding:1rem;margin-top:1rem;text-align:center;">
+                            <div style="font-size:0.9rem;opacity:0.8;">Tiempo estimado ahorrado</div>
+                            <div style="font-size:1.8rem;font-weight:bold;color:#2ecc71;">⏱️ {tiempo_str}</div>
+                            <div style="font-size:0.8rem;opacity:0.6;">vs ~30 min por declaración manual</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    if n_errores > 0:
+                        st.warning(f"⚠️ {n_errores} archivo(s) con errores — revisa el detalle abajo")
+
+                    # Logs
+                    with st.expander("📋 Detalle del procesamiento", expanded=False):
+                        for log_line in logs:
+                            st.text(log_line)
 
                     st.download_button(
                         label="📥 Descargar Consolidado",
@@ -445,7 +525,7 @@ with tab_excel:
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         type="primary",
                     )
-                    st.success(f"✅ Listo — {stats['ok']} registro(s) consolidado(s). Te quedan {remaining_uses()} uso(s) gratuito(s).")
+                    st.success(f"✅ Te quedan {remaining_uses()} uso(s) gratuito(s).")
                     st.markdown(
                         '💡 **¿Tienes otra tarea contable que te quite horas?** '
                         'Cuéntanos y te proponemos una solución. '

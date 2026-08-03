@@ -261,6 +261,8 @@ def process_uploaded_pdfs(uploaded_files: list) -> tuple:
         'ok': len(records),
         'errors': len(errors),
         'periodos': sorted(df['Periodo'].dropna().unique().tolist()),
+        'empresas': sorted(df['RUC'].dropna().unique().tolist()),
+        'n_casillas': len([c for c in df.columns if c.startswith('C') and c[1:].isdigit()]),
     }
     return excel_bytes, stats, logs
 
@@ -429,5 +431,6 @@ def consolidate_uploaded_excels(uploaded_files: list, empresa_name: str = "Mi Em
         'errors': len(errors),
         'empresas': len(empresas),
         'periodos': sorted(df['Periodo'].dropna().unique().tolist()),
+        'n_casillas': len(casilla_cols),
     }
     return output.getvalue(), stats, logs
