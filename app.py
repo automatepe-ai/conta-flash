@@ -387,6 +387,14 @@ with tab_pdf:
                     if n_errores > 0:
                         st.warning(f"⚠️ {n_errores} archivo(s) con errores — revisa el detalle abajo")
 
+                    # Validaciones automáticas
+                    warnings = stats.get('warnings', [])
+                    if warnings:
+                        with st.expander(f"🔍 Validaciones automáticas — {len(warnings)} advertencia(s)", expanded=False):
+                            for w in warnings:
+                                icon = "⚠️" if w['severidad'] == 'warning' else "ℹ️"
+                                st.markdown(f"{icon} **{w['mensaje']}**")
+
                     # Logs
                     with st.expander("📋 Detalle del procesamiento", expanded=False):
                         for log_line in logs:
@@ -570,6 +578,14 @@ with tab_excel:
 
                     if n_errores > 0:
                         st.warning(f"⚠️ {n_errores} archivo(s) con errores — revisa el detalle abajo")
+
+                    # Validaciones automáticas
+                    warnings = stats.get('warnings', [])
+                    if warnings:
+                        with st.expander(f"🔍 Validaciones automáticas — {len(warnings)} advertencia(s)", expanded=False):
+                            for w in warnings:
+                                icon = "⚠️" if w['severidad'] == 'warning' else "ℹ️"
+                                st.markdown(f"{icon} **{w['mensaje']}**")
 
                     # Logs
                     with st.expander("📋 Detalle del procesamiento", expanded=False):
