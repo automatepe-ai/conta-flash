@@ -437,14 +437,25 @@ with tab_pdf:
                         for log_line in logs:
                             st.text(log_line)
 
-                    # Botón descarga
-                    st.download_button(
-                        label="📥 Descargar Excel Consolidado",
-                        data=excel_bytes,
-                        file_name="ContaFlash_621_Consolidado.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        type="primary",
-                    )
+                    # Botones de descarga
+                    col_dl1, col_dl2 = st.columns(2)
+                    with col_dl1:
+                        st.download_button(
+                            label="📥 Descargar Excel Consolidado",
+                            data=excel_bytes,
+                            file_name="ContaFlash_621_Consolidado.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            type="primary",
+                        )
+                    with col_dl2:
+                        if df is not None:
+                            csv_bytes = df.to_csv(index=False).encode('utf-8')
+                            st.download_button(
+                                label="📄 Descargar CSV",
+                                data=csv_bytes,
+                                file_name="ContaFlash_621_Consolidado.csv",
+                                mime="text/csv",
+                            )
 
                     # Consolidación inteligente
                     if df is not None and len(df) > 0:
@@ -666,13 +677,24 @@ with tab_excel:
                         for log_line in logs:
                             st.text(log_line)
 
-                    st.download_button(
-                        label="📥 Descargar Consolidado",
-                        data=excel_bytes,
-                        file_name="ContaFlash_Consolidado_PDT621.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        type="primary",
-                    )
+                    col_dl1, col_dl2 = st.columns(2)
+                    with col_dl1:
+                        st.download_button(
+                            label="📥 Descargar Consolidado",
+                            data=excel_bytes,
+                            file_name="ContaFlash_Consolidado_PDT621.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            type="primary",
+                        )
+                    with col_dl2:
+                        if df is not None:
+                            csv_bytes = df.to_csv(index=False).encode('utf-8')
+                            st.download_button(
+                                label="📄 Descargar CSV",
+                                data=csv_bytes,
+                                file_name="ContaFlash_Consolidado_PDT621.csv",
+                                mime="text/csv",
+                            )
 
                     # Consolidación inteligente
                     if df is not None and len(df) > 0:
