@@ -330,7 +330,7 @@ with tab_pdf:
         else:
             if st.button("🚀 Procesar archivos", key="btn_pdf", type="primary"):
                 with st.spinner("Procesando PDFs..."):
-                    excel_bytes, stats, logs = process_uploaded_pdfs(uploaded_pdfs)
+                    excel_bytes, stats, logs, df = process_uploaded_pdfs(uploaded_pdfs)
 
                 # Mostrar logs
                 with st.expander("📋 Detalle del procesamiento", expanded=True):
@@ -400,6 +400,64 @@ with tab_pdf:
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         type="primary",
                     )
+
+                    # Consolidación inteligente
+                    if df is not None and len(df) > 0:
+                        st.markdown("---")
+                        st.markdown("### 📊 Consolidación Inteligente")
+                        st.markdown("Elige cómo quieres ver tus datos:")
+
+                        col1, col2, col3, col4, col5 = st.columns(5)
+                        with col1:
+                            btn_ruc = st.button("🏢 Por RUC", key="btn_ruc")
+                        with col2:
+                            btn_periodo = st.button("📅 Por Período", key="btn_periodo")
+                        with col3:
+                            btn_empresa = st.button("🏭 Por Empresa", key="btn_empresa")
+                        with col4:
+                            btn_mes = st.button("📆 Por Mes", key="btn_mes")
+                        with col5:
+                            btn_general = st.button("📋 General", key="btn_general")
+
+                        casilla_cols = [c for c in df.columns if c.startswith('C') and c[1:].isdigit()]
+                        display_cols = ['RUC', 'Razon_Social', 'Periodo'] + casilla_cols[:5]
+                        display_cols = [c for c in display_cols if c in df.columns]
+
+                        if btn_ruc and 'RUC' in df.columns:
+                            st.markdown("**Vista por RUC:**")
+                            for ruc in sorted(df['RUC'].dropna().unique()):
+                                ruc_df = df[df['RUC'] == ruc]
+                                razon = ruc_df['Razon_Social'].iloc[0] if 'Razon_Social' in ruc_df.columns else ''
+                                with st.expander(f"🏢 {ruc} — {razon} ({len(ruc_df)} declaración(es))"):
+                                    st.dataframe(ruc_df[display_cols], use_container_width=True, hide_index=True)
+
+                        elif btn_periodo and 'Periodo' in df.columns:
+                            st.markdown("**Vista por Período:**")
+                            for periodo in sorted(df['Periodo'].dropna().unique()):
+                                per_df = df[df['Periodo'] == periodo]
+                                with st.expander(f"📅 {periodo} ({len(per_df)} declaración(es))"):
+                                    st.dataframe(per_df[display_cols], use_container_width=True, hide_index=True)
+
+                        elif btn_empresa and 'Razon_Social' in df.columns:
+                            st.markdown("**Vista por Empresa:**")
+                            for empresa in sorted(df['Razon_Social'].dropna().unique()):
+                                emp_df = df[df['Razon_Social'] == empresa]
+                                with st.expander(f"🏭 {empresa} ({len(emp_df)} declaración(es))"):
+                                    st.dataframe(emp_df[display_cols], use_container_width=True, hide_index=True)
+
+                        elif btn_mes and 'Periodo' in df.columns:
+                            st.markdown("**Vista por Mes:**")
+                            df['_Mes'] = df['Periodo'].str[:7] if df['Periodo'].str.len() >= 7 else df['Periodo']
+                            for mes in sorted(df['_Mes'].dropna().unique()):
+                                mes_df = df[df['_Mes'] == mes]
+                                with st.expander(f"📆 {mes} ({len(mes_df)} declaración(es))"):
+                                    st.dataframe(mes_df[display_cols], use_container_width=True, hide_index=True)
+                            df.drop('_Mes', axis=1, inplace=True)
+
+                        elif btn_general:
+                            st.markdown("**Vista general:**")
+                            st.dataframe(df[display_cols], use_container_width=True, hide_index=True)
+
                     st.success(f"✅ Te quedan {remaining_uses()} uso(s) gratuito(s).")
                     st.markdown(
                         '💡 **¿Tienes otra tarea contable que te quite horas?** '
@@ -455,7 +513,7 @@ with tab_excel:
         else:
             if st.button("🚀 Consolidar archivos", key="btn_excel", type="primary"):
                 with st.spinner("Consolidando..."):
-                    excel_bytes, stats, logs = consolidate_uploaded_excels(
+                    excel_bytes, stats, logs, df = consolidate_uploaded_excels(
                         uploaded_excels, empresa_name
                     )
 
@@ -525,6 +583,64 @@ with tab_excel:
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         type="primary",
                     )
+
+                    # Consolidación inteligente
+                    if df is not None and len(df) > 0:
+                        st.markdown("---")
+                        st.markdown("### 📊 Consolidación Inteligente")
+                        st.markdown("Elige cómo quieres ver tus datos:")
+
+                        col1, col2, col3, col4, col5 = st.columns(5)
+                        with col1:
+                            btn_ruc = st.button("🏢 Por RUC", key="btn_ruc_excel")
+                        with col2:
+                            btn_periodo = st.button("📅 Por Período", key="btn_periodo_excel")
+                        with col3:
+                            btn_empresa = st.button("🏭 Por Empresa", key="btn_empresa_excel")
+                        with col4:
+                            btn_mes = st.button("📆 Por Mes", key="btn_mes_excel")
+                        with col5:
+                            btn_general = st.button("📋 General", key="btn_general_excel")
+
+                        casilla_cols = [c for c in df.columns if c.startswith('C') and c[1:].isdigit()]
+                        display_cols = ['RUC', 'Razon_Social', 'Periodo'] + casilla_cols[:5]
+                        display_cols = [c for c in display_cols if c in df.columns]
+
+                        if btn_ruc and 'RUC' in df.columns:
+                            st.markdown("**Vista por RUC:**")
+                            for ruc in sorted(df['RUC'].dropna().unique()):
+                                ruc_df = df[df['RUC'] == ruc]
+                                razon = ruc_df['Razon_Social'].iloc[0] if 'Razon_Social' in ruc_df.columns else ''
+                                with st.expander(f"🏢 {ruc} — {razon} ({len(ruc_df)} declaración(es))"):
+                                    st.dataframe(ruc_df[display_cols], use_container_width=True, hide_index=True)
+
+                        elif btn_periodo and 'Periodo' in df.columns:
+                            st.markdown("**Vista por Período:**")
+                            for periodo in sorted(df['Periodo'].dropna().unique()):
+                                per_df = df[df['Periodo'] == periodo]
+                                with st.expander(f"📅 {periodo} ({len(per_df)} declaración(es))"):
+                                    st.dataframe(per_df[display_cols], use_container_width=True, hide_index=True)
+
+                        elif btn_empresa and 'Razon_Social' in df.columns:
+                            st.markdown("**Vista por Empresa:**")
+                            for empresa in sorted(df['Razon_Social'].dropna().unique()):
+                                emp_df = df[df['Razon_Social'] == empresa]
+                                with st.expander(f"🏭 {empresa} ({len(emp_df)} declaración(es))"):
+                                    st.dataframe(emp_df[display_cols], use_container_width=True, hide_index=True)
+
+                        elif btn_mes and 'Periodo' in df.columns:
+                            st.markdown("**Vista por Mes:**")
+                            df['_Mes'] = df['Periodo'].str[:7] if df['Periodo'].str.len() >= 7 else df['Periodo']
+                            for mes in sorted(df['_Mes'].dropna().unique()):
+                                mes_df = df[df['_Mes'] == mes]
+                                with st.expander(f"📆 {mes} ({len(mes_df)} declaración(es))"):
+                                    st.dataframe(mes_df[display_cols], use_container_width=True, hide_index=True)
+                            df.drop('_Mes', axis=1, inplace=True)
+
+                        elif btn_general:
+                            st.markdown("**Vista general:**")
+                            st.dataframe(df[display_cols], use_container_width=True, hide_index=True)
+
                     st.success(f"✅ Te quedan {remaining_uses()} uso(s) gratuito(s).")
                     st.markdown(
                         '💡 **¿Tienes otra tarea contable que te quite horas?** '

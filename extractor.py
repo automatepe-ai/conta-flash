@@ -249,7 +249,7 @@ def process_uploaded_pdfs(uploaded_files: list) -> tuple:
                 logs.append(f"❌ {filename} — {e}")
 
     if not records:
-        return None, {'total': 0, 'ok': 0, 'errors': len(errors)}, logs
+        return None, {'total': 0, 'ok': 0, 'errors': len(errors)}, logs, None
 
     df = pd.DataFrame(records)
     df = _order_columns(df)
@@ -264,7 +264,7 @@ def process_uploaded_pdfs(uploaded_files: list) -> tuple:
         'empresas': sorted(df['RUC'].dropna().unique().tolist()),
         'n_casillas': len([c for c in df.columns if c.startswith('C') and c[1:].isdigit()]),
     }
-    return excel_bytes, stats, logs
+    return excel_bytes, stats, logs, df
 
 
 # ============================================================
@@ -433,4 +433,4 @@ def consolidate_uploaded_excels(uploaded_files: list, empresa_name: str = "Mi Em
         'periodos': sorted(df['Periodo'].dropna().unique().tolist()),
         'n_casillas': len(casilla_cols),
     }
-    return output.getvalue(), stats, logs
+    return output.getvalue(), stats, logs, df
