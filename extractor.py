@@ -320,6 +320,12 @@ def process_uploaded_pdfs(uploaded_files: list) -> tuple:
     desc_row = _build_description_row()
     excel_bytes = _write_excel_bytes(df, desc_row)
 
+    # Calcular totales financieros
+    def _safe_sum(col):
+        if col in df.columns:
+            return pd.to_numeric(df[col], errors='coerce').sum()
+        return 0
+
     stats = {
         'total': len(records) + len(errors),
         'ok': len(records),
@@ -328,6 +334,11 @@ def process_uploaded_pdfs(uploaded_files: list) -> tuple:
         'empresas': sorted(df['RUC'].dropna().unique().tolist()),
         'n_casillas': len([c for c in df.columns if c.startswith('C') and c[1:].isdigit()]),
         'warnings': validate_dataframe(df),
+        'totales': {
+            'igv_ventas': _safe_sum('C101'),
+            'igv_compras': _safe_sum('C108'),
+            'renta': _safe_sum('C312'),
+        },
     }
     return excel_bytes, stats, logs, df
 
@@ -490,6 +501,11 @@ def consolidate_uploaded_excels(uploaded_files: list, empresa_name: str = "Mi Em
             err_df = pd.DataFrame(errors)
             err_df.to_excel(writer, sheet_name='Errores', index=False)
 
+    def _safe_sum(col):
+        if col in df.columns:
+            return pd.to_numeric(df[col], errors='coerce').sum()
+        return 0
+
     stats = {
         'total': len(records) + len(errors),
         'ok': len(records),
@@ -498,5 +514,10 @@ def consolidate_uploaded_excels(uploaded_files: list, empresa_name: str = "Mi Em
         'periodos': sorted(df['Periodo'].dropna().unique().tolist()),
         'n_casillas': len(casilla_cols),
         'warnings': validate_dataframe(df),
+        'totales': {
+            'igv_ventas': _safe_sum('C101'),
+            'igv_compras': _safe_sum('C108'),
+            'renta': _safe_sum('C312'),
+        },
     }
     return output.getvalue(), stats, logs, df

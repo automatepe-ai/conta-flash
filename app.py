@@ -384,6 +384,43 @@ with tab_pdf:
                     </div>
                     """, unsafe_allow_html=True)
 
+                    # Estadísticas del lote
+                    totales = stats.get('totales', {})
+                    if any(v != 0 for v in totales.values()):
+                        igv_ventas = totales.get('igv_ventas', 0)
+                        igv_compras = totales.get('igv_compras', 0)
+                        renta = totales.get('renta', 0)
+
+                        def _fmt_soles(val):
+                            if val == 0: return "S/ 0"
+                            if abs(val) >= 1_000_000: return f"S/ {val/1_000_000:,.1f}M"
+                            if abs(val) >= 1_000: return f"S/ {val/1_000:,.1f}K"
+                            return f"S/ {val:,.2f}"
+
+                        st.markdown(f"""
+                        <div style="background:linear-gradient(135deg,#0f3460 0%,#16213e 100%);
+                                    border-radius:12px;padding:1.5rem;margin:0.5rem 0;color:white;">
+                            <div style="text-align:center;margin-bottom:1rem;">
+                                <span style="font-size:1.2rem;">📈</span>
+                                <strong style="color:#e67e22;"> Estadísticas del Lote</strong>
+                            </div>
+                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;">
+                                <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
+                                    <div style="font-size:1.3rem;font-weight:bold;color:#2ecc71;">{_fmt_soles(igv_ventas)}</div>
+                                    <div style="font-size:0.75rem;opacity:0.7;">IGV Ventas (C101)</div>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
+                                    <div style="font-size:1.3rem;font-weight:bold;color:#e74c3c;">{_fmt_soles(igv_compras)}</div>
+                                    <div style="font-size:0.75rem;opacity:0.7;">IGV Compras (C108)</div>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
+                                    <div style="font-size:1.3rem;font-weight:bold;color:#f39c12;">{_fmt_soles(renta)}</div>
+                                    <div style="font-size:0.75rem;opacity:0.7;">Renta (C312)</div>
+                                </div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
                     if n_errores > 0:
                         st.warning(f"⚠️ {n_errores} archivo(s) con errores — revisa el detalle abajo")
 
@@ -575,6 +612,43 @@ with tab_excel:
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
+
+                    # Estadísticas del lote
+                    totales = stats.get('totales', {})
+                    if any(v != 0 for v in totales.values()):
+                        igv_ventas = totales.get('igv_ventas', 0)
+                        igv_compras = totales.get('igv_compras', 0)
+                        renta = totales.get('renta', 0)
+
+                        def _fmt_soles(val):
+                            if val == 0: return "S/ 0"
+                            if abs(val) >= 1_000_000: return f"S/ {val/1_000_000:,.1f}M"
+                            if abs(val) >= 1_000: return f"S/ {val/1_000:,.1f}K"
+                            return f"S/ {val:,.2f}"
+
+                        st.markdown(f"""
+                        <div style="background:linear-gradient(135deg,#0f3460 0%,#16213e 100%);
+                                    border-radius:12px;padding:1.5rem;margin:0.5rem 0;color:white;">
+                            <div style="text-align:center;margin-bottom:1rem;">
+                                <span style="font-size:1.2rem;">📈</span>
+                                <strong style="color:#e67e22;"> Estadísticas del Lote</strong>
+                            </div>
+                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;">
+                                <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
+                                    <div style="font-size:1.3rem;font-weight:bold;color:#2ecc71;">{_fmt_soles(igv_ventas)}</div>
+                                    <div style="font-size:0.75rem;opacity:0.7;">IGV Ventas (C101)</div>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
+                                    <div style="font-size:1.3rem;font-weight:bold;color:#e74c3c;">{_fmt_soles(igv_compras)}</div>
+                                    <div style="font-size:0.75rem;opacity:0.7;">IGV Compras (C108)</div>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
+                                    <div style="font-size:1.3rem;font-weight:bold;color:#f39c12;">{_fmt_soles(renta)}</div>
+                                    <div style="font-size:0.75rem;opacity:0.7;">Renta (C312)</div>
+                                </div>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
 
                     if n_errores > 0:
                         st.warning(f"⚠️ {n_errores} archivo(s) con errores — revisa el detalle abajo")
