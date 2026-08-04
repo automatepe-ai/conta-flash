@@ -203,6 +203,70 @@ def _write_excel_bytes(df: pd.DataFrame, desc_row: dict, include_dict: bool = Tr
 
 
 # ============================================================
+# VALIDACIONES AUTOMÁTICAS
+# ============================================================
+def validate_dataframe(df: pd.DataFrame) -> list:
+    """
+    Valida el DataFrame procesado y retorna lista de advertencias.
+    Cada advertencia es un dict: {'tipo': str, 'mensaje': str, 'severidad': str}
+    """
+    warnings = []
+
+    if df is None or len(df) == 0:
+        return warnings
+
+    # 1. Declaraciones duplicadas (mismo RUC + mismo Período)
+    if 'RUC' in df.columns and 'Periodo' in df.columns:
+        dupes = df.groupby(['RUC', 'Periodo']).size().reset_index(name='count')
+        dupes = dupes[dupes['count'] > 1]
+        for _, row in dupes.iterrows():
+            warnings.append({
+                'tipo': 'duplicado',
+                'mensaje': f"RUC {row['RUC']} tiene {row['count']} declaraciones para {row['Periodo']}",
+                'severidad': 'warning',
+            })
+
+    # 2. RUCs duplicados en diferentes archivos
+    if 'RUC' in df.columns and 'Archivo_Origen' in df.columns:
+        ruc_files = df.groupby('RUC')['Archivo_Origen'].nunique().reset_index(name='n_archivos')
+        ruc_files = ruc_files[ruc_files['n_archivos'] > 1]
+        for _, row in ruc_files.iterrows():
+            warnings.append({
+                'tipo': 'ruc_duplicado',
+                'mensaje': f"RUC {row['RUC']} aparece en {row['n_archivos']} archivos distintos",
+                'severidad': 'info',
+            })
+
+    # 3. Información faltante (campos header vacíos)
+    header_cols = ['RUC', 'Razon_Social', 'Periodo']
+    for col in header_cols:
+        if col in df.columns:
+            missing = df[col].isna().sum() + (df[col] == '').sum()
+            if missing > 0:
+                warnings.append({
+                    'tipo': 'faltante',
+                    'mensaje': f"{missing} declaración(es) sin campo '{col}'",
+                    'severidad': 'info',
+                })
+
+    # 4. Casillas con valores en 0 o vacíos (posibles errores de extracción)
+    casilla_cols = [c for c in df.columns if c.startswith('C') and c[1:].isdigit()]
+    key_casillas = ['C101', 'C108', 'C312']  # IGV Ventas, IGV Compras, Renta
+    for casilla in key_casillas:
+        if casilla in df.columns:
+            zeros = (df[casilla] == 0).sum() + (df[casilla] == '').sum() + df[casilla].isna().sum()
+            if zeros > 0 and zeros < len(df):
+                desc = CASILLAS.get(casilla[1:], casilla)
+                warnings.append({
+                    'tipo': 'valor_cero',
+                    'mensaje': f"{zeros} declaración(es) con {desc} en 0 o vacío",
+                    'severidad': 'info',
+                })
+
+    return warnings
+
+
+# ============================================================
 # FUNCIÓN PRINCIPAL: Procesar PDFs desde archivos subidos
 # ============================================================
 def process_uploaded_pdfs(uploaded_files: list) -> tuple:
@@ -249,20 +313,34 @@ def process_uploaded_pdfs(uploaded_files: list) -> tuple:
                 logs.append(f"❌ {filename} — {e}")
 
     if not records:
-        return None, {'total': 0, 'ok': 0, 'errors': len(errors)}, logs
+        return None, {'total': 0, 'ok': 0, 'errors': len(errors)}, logs, None
 
     df = pd.DataFrame(records)
     df = _order_columns(df)
     desc_row = _build_description_row()
     excel_bytes = _write_excel_bytes(df, desc_row)
 
+    # Calcular totales financieros
+    def _safe_sum(col):
+        if col in df.columns:
+            return pd.to_numeric(df[col], errors='coerce').sum()
+        return 0
+
     stats = {
         'total': len(records) + len(errors),
         'ok': len(records),
         'errors': len(errors),
         'periodos': sorted(df['Periodo'].dropna().unique().tolist()),
+        'empresas': sorted(df['RUC'].dropna().unique().tolist()),
+        'n_casillas': len([c for c in df.columns if c.startswith('C') and c[1:].isdigit()]),
+        'warnings': validate_dataframe(df),
+        'totales': {
+            'igv_ventas': _safe_sum('C101'),
+            'igv_compras': _safe_sum('C108'),
+            'renta': _safe_sum('C312'),
+        },
     }
-    return excel_bytes, stats, logs
+    return excel_bytes, stats, logs, df
 
 
 # ============================================================
@@ -423,11 +501,23 @@ def consolidate_uploaded_excels(uploaded_files: list, empresa_name: str = "Mi Em
             err_df = pd.DataFrame(errors)
             err_df.to_excel(writer, sheet_name='Errores', index=False)
 
+    def _safe_sum(col):
+        if col in df.columns:
+            return pd.to_numeric(df[col], errors='coerce').sum()
+        return 0
+
     stats = {
         'total': len(records) + len(errors),
         'ok': len(records),
         'errors': len(errors),
         'empresas': len(empresas),
         'periodos': sorted(df['Periodo'].dropna().unique().tolist()),
+        'n_casillas': len(casilla_cols),
+        'warnings': validate_dataframe(df),
+        'totales': {
+            'igv_ventas': _safe_sum('C101'),
+            'igv_compras': _safe_sum('C108'),
+            'renta': _safe_sum('C312'),
+        },
     }
-    return output.getvalue(), stats, logs
+    return output.getvalue(), stats, logs, df
