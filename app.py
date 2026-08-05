@@ -179,51 +179,62 @@ st.markdown("""
     /* === FOOTER OCULTO === */
     footer {visibility: hidden;}
     
-    /* === TESTIMONIOS === */
-    .testimonial-section {
+    /* === VALIDACIÓN === */
+    .validation-section {
         display: flex;
         justify-content: center;
         gap: 2rem;
         flex-wrap: wrap;
         margin: 2rem 0;
     }
-    .testimonial-card {
+    .validation-card {
         background: #ffffff;
         border-radius: 12px;
         padding: 1.5rem;
         max-width: 300px;
-        text-align: center;
+        text-align: left;
         border: 1px solid #e8e0d6;
         box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
-    .testimonial-avatar {
-        width: 64px;
-        height: 64px;
-        border-radius: 50%;
-        background: #1e3a5f;
-        color: #ffffff;
-        font-size: 1.6rem;
-        font-weight: bold;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 0.8rem auto;
-    }
-    .testimonial-card p {
+    .validation-card p {
         font-size: 0.95rem;
         color: #2d2a26;
-        font-style: italic;
         margin-bottom: 0.8rem;
         line-height: 1.5;
     }
-    .testimonial-card .name {
+    .validation-name {
         font-weight: 600;
         color: #1e3a5f;
         font-size: 0.9rem;
     }
-    .testimonial-card .role {
+    .validation-role {
         color: #6b6560;
         font-size: 0.8rem;
+        margin-bottom: 0.5rem;
+    }
+    .validation-badge {
+        display: inline-block;
+        background: #eafaf1;
+        color: #27ae60;
+        padding: 0.2rem 0.6rem;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-bottom: 0.6rem;
+    }
+    .validation-metric {
+        text-align: center;
+        padding: 1rem;
+    }
+    .validation-metric .number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #1e3a5f;
+    }
+    .validation-metric .label {
+        font-size: 0.9rem;
+        color: #6b6560;
+        margin-top: 0.3rem;
     }
     
     /* === BOTONES PRIMARIOS (azul oscuro) === */
@@ -365,10 +376,11 @@ else:
 # ============================================================
 # TABS PRINCIPALES
 # ============================================================
-tab_pdf, tab_excel, tab_info = st.tabs([
+tab_pdf, tab_excel, tab_info, tab_validacion = st.tabs([
     "📄 Extraer de PDFs",
     "📁 Consolidar Excels",
-    "ℹ️ Información"
+    "ℹ️ Información",
+    "✅ Validación"
 ])
 
 # ─────────────────────────────────────────────────────────
@@ -914,16 +926,67 @@ with tab_info:
         "© 2026 ContaFlash"
     )
 
-# ============================================================
-# TESTIMONIOS (al final)
-# ============================================================
-st.markdown("""
-<div class="testimonial-section">
-    <div class="testimonial-card">
-        <div class="testimonial-avatar">S</div>
-        <p>"Antes me tomaba toda la tarde copiar las casillas del 621. Ahora subo los PDFs y en segundos tengo todo en Excel."</p>
-        <div class="name">Sandra M.</div>
-        <div class="role">Contadora independiente</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+# ─────────────────────────────────────────────────────────
+# TAB 4: VALIDACIÓN
+# ─────────────────────────────────────────────────────────
+with tab_validacion:
+    st.markdown("### Resultados de Validación")
+    st.markdown(
+        "ContaFlash fue probado **en sitio** por contadores reales "
+        "realizando tareas reales del día a día."
+    )
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown("""
+        <div class="validation-metric">
+            <div class="number">2</div>
+            <div class="label">Contadores evaluados</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col2:
+        st.markdown("""
+        <div class="validation-metric">
+            <div class="number" style="color:#34d399;">100%</div>
+            <div class="label">Tareas completadas</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col3:
+        st.markdown("""
+        <div class="validation-metric">
+            <div class="number" style="color:#34d399;">0</div>
+            <div class="label">Errores encontrados</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.markdown("#### Quiénes probaron ContaFlash")
+
+    col_lucy, col_omar = st.columns(2)
+
+    with col_lucy:
+        st.markdown("""
+        <div class="validation-card">
+            <span class="validation-badge">✅ Validado</span>
+            <div class="validation-name">Lucy</div>
+            <div class="validation-role">Contadora independiente</div>
+            <p>Procesó declaraciones PDT 621 reales con PDFs de sus clientes. Extracción exitosa de todas las casillas sin errores.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_omar:
+        st.markdown("""
+        <div class="validation-card">
+            <span class="validation-badge">✅ Validado</span>
+            <div class="validation-name">Omar</div>
+            <div class="validation-role">Emprendedor / Marketero</div>
+            <p>Consolidó múltiples archivos Excel del PDT 621. Verificó que los totales coincidieran con los reportes originales.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.markdown("#### ¿Quieres probarlo con tus propios datos?")
+    st.markdown(
+        "📱 [Escríbenos por WhatsApp](https://wa.me/51962927872?text=Hola%2C+quiero+probar+ContaFlash+con+mis+datos) · "
+        "📧 [hola@contaflash.com](mailto:hola@contaflash.com)"
+    )
