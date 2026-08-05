@@ -178,6 +178,58 @@ def _order_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df[header_cols + casilla_cols].sort_values('Periodo').reset_index(drop=True)
 
 
+def _apply_excel_styles(ws, df):
+    """Aplica estilos profesionales al worksheet de openpyxl."""
+    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+    from openpyxl.utils import get_column_letter
+
+    if ws.max_row < 1 or ws.max_column < 1:
+        return
+
+    HEADER_FILL = PatternFill(start_color="1E3A5F", end_color="1E3A5F", fill_type="solid")
+    HEADER_FONT = Font(bold=True, color="FFFFFF", size=10)
+    DESC_FILL = PatternFill(start_color="F5F0E8", end_color="F5F0E8", fill_type="solid")
+    DESC_FONT = Font(italic=True, color="6B6560", size=9)
+    BORDER = Border(
+        left=Side(style="thin", color="E8E0D6"),
+        right=Side(style="thin", color="E8E0D6"),
+        top=Side(style="thin", color="E8E0D6"),
+        bottom=Side(style="thin", color="E8E0D6"),
+    )
+    ALT_FILL = PatternFill(start_color="FAFAFA", end_color="FAFAFA", fill_type="solid")
+
+    # Headers (fila 1)
+    for col_idx in range(1, len(df.columns) + 1):
+        cell = ws.cell(row=1, column=col_idx)
+        cell.font = HEADER_FONT
+        cell.fill = HEADER_FILL
+        cell.border = BORDER
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    # Descripción (fila 2)
+    for col_idx in range(1, len(df.columns) + 1):
+        cell = ws.cell(row=2, column=col_idx)
+        cell.font = DESC_FONT
+        cell.fill = DESC_FILL
+        cell.border = BORDER
+
+    # Datos (filas 3+)
+    for row_idx in range(3, len(df) + 3):
+        for col_idx in range(1, len(df.columns) + 1):
+            cell = ws.cell(row=row_idx, column=col_idx)
+            cell.border = BORDER
+            if row_idx % 2 == 0:
+                cell.fill = ALT_FILL
+            col_name = df.columns[col_idx - 1]
+            if col_name.startswith('C') and col_name[1:].isdigit():
+                cell.number_format = '#,##0.00'
+                cell.alignment = Alignment(horizontal="right")
+
+    # Congelar paneles
+    if len(df.columns) >= 2:
+        ws.freeze_panes = "C3"
+
+
 def _write_excel_bytes(df: pd.DataFrame, desc_row: dict, include_dict: bool = True) -> bytes:
     """Genera un Excel en memoria y retorna los bytes."""
     output = BytesIO()
@@ -191,6 +243,8 @@ def _write_excel_bytes(df: pd.DataFrame, desc_row: dict, include_dict: bool = Tr
         for col_idx, col_name in enumerate(df.columns, 1):
             max_len = max(len(str(col_name)), 12)
             ws.column_dimensions[ws.cell(row=1, column=col_idx).column_letter].width = max_len + 2
+
+        _apply_excel_styles(ws, df)
 
         if include_dict:
             dict_df = pd.DataFrame([
@@ -476,6 +530,7 @@ def consolidate_uploaded_excels(uploaded_files: list, empresa_name: str = "Mi Em
         for col_idx, col_name in enumerate(df.columns, 1):
             max_len = max(len(str(col_name)), 12)
             ws.column_dimensions[ws.cell(row=1, column=col_idx).column_letter].width = max_len + 2
+        _apply_excel_styles(ws, df)
 
         # Pestañas por empresa
         empresas = df['Empresa'].unique()
@@ -488,6 +543,7 @@ def consolidate_uploaded_excels(uploaded_files: list, empresa_name: str = "Mi Em
                 ws.cell(row=1, column=col_idx, value=col_name)
                 if col_name in desc_row:
                     ws.cell(row=2, column=col_idx, value=desc_row[col_name])
+            _apply_excel_styles(ws, emp_df)
 
         # Diccionario
         dict_df = pd.DataFrame([

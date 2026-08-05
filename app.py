@@ -32,6 +32,14 @@ if PRO_KEY not in st.session_state:
 if PRO_CLIENT_KEY not in st.session_state:
     st.session_state[PRO_CLIENT_KEY] = ""
 
+# Resultados de procesamiento (persisten entre reruns)
+PDF_RESULTS_KEY = "contaflash_pdf_results"
+EXCEL_RESULTS_KEY = "contaflash_excel_results"
+if PDF_RESULTS_KEY not in st.session_state:
+    st.session_state[PDF_RESULTS_KEY] = None
+if EXCEL_RESULTS_KEY not in st.session_state:
+    st.session_state[EXCEL_RESULTS_KEY] = None
+
 # ============================================================
 # PERSISTENCIA — localStorage
 # ============================================================
@@ -402,198 +410,205 @@ with tab_pdf:
         else:
             if st.button("🚀 Procesar archivos", key="btn_pdf", type="primary"):
                 with st.spinner("Procesando PDFs..."):
-                    excel_bytes, stats, logs, df = process_uploaded_pdfs(uploaded_pdfs)
+                    _results = process_uploaded_pdfs(uploaded_pdfs)
+                st.session_state[PDF_RESULTS_KEY] = _results
 
-                # Mostrar logs
-                with st.expander("📋 Detalle del procesamiento", expanded=True):
-                    for log_line in logs:
-                        st.text(log_line)
+        # Renderizar resultados desde session_state (persiste entre reruns)
+        if st.session_state[PDF_RESULTS_KEY] is not None:
+            excel_bytes, stats, logs, df = st.session_state[PDF_RESULTS_KEY]
 
-                if excel_bytes:
-                    increment_usage()
+            # Mostrar logs
+            with st.expander("📋 Detalle del procesamiento", expanded=True):
+                for log_line in logs:
+                    st.text(log_line)
 
-                    # Panel de resultados
-                    n_formularios = stats['ok']
-                    n_casillas = stats.get('n_casillas', 0)
-                    n_periodos = len(stats.get('periodos', []))
-                    n_empresas = len(stats.get('empresas', []))
-                    n_errores = stats['errors']
-                    tiempo_ahorrado_min = n_formularios * 30
-                    horas = tiempo_ahorrado_min // 60
-                    minutos = tiempo_ahorrado_min % 60
-                    tiempo_str = f"{horas}h {minutos}min" if horas > 0 else f"{minutos}min"
+            if excel_bytes:
+                increment_usage()
+
+                # Panel de resultados
+                n_formularios = stats['ok']
+                n_casillas = stats.get('n_casillas', 0)
+                n_periodos = len(stats.get('periodos', []))
+                n_empresas = len(stats.get('empresas', []))
+                n_errores = stats['errors']
+                tiempo_ahorrado_min = n_formularios * 30
+                horas = tiempo_ahorrado_min // 60
+                minutos = tiempo_ahorrado_min % 60
+                tiempo_str = f"{horas}h {minutos}min" if horas > 0 else f"{minutos}min"
+
+                st.markdown(f"""
+                <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);
+                            border-radius:16px;padding:2rem;margin:1rem 0;color:white;">
+                    <div style="text-align:center;margin-bottom:1.5rem;">
+                        <span style="font-size:2.5rem;">✅</span>
+                        <h2 style="color:#e67e22;margin:0.5rem 0 0 0;">Procesamiento completado</h2>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;">
+                        <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
+                            <div style="font-size:2rem;font-weight:bold;color:#e67e22;">{n_formularios}</div>
+                            <div style="font-size:0.85rem;opacity:0.8;">Formularios</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
+                            <div style="font-size:2rem;font-weight:bold;color:#2ecc71;">{n_casillas}</div>
+                            <div style="font-size:0.85rem;opacity:0.8;">Registros extraídos</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
+                            <div style="font-size:2rem;font-weight:bold;color:#3498db;">{n_empresas}</div>
+                            <div style="font-size:0.85rem;opacity:0.8;">Empresas</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
+                            <div style="font-size:2rem;font-weight:bold;color:#9b59b6;">{n_periodos}</div>
+                            <div style="font-size:0.85rem;opacity:0.8;">Períodos</div>
+                        </div>
+                    </div>
+                    <div style="background:rgba(46,204,113,0.15);border-radius:12px;padding:1rem;margin-top:1rem;text-align:center;">
+                        <div style="font-size:0.9rem;opacity:0.8;">Tiempo estimado ahorrado</div>
+                        <div style="font-size:1.8rem;font-weight:bold;color:#2ecc71;">⏱️ {tiempo_str}</div>
+                        <div style="font-size:0.8rem;opacity:0.6;">vs ~30 min por declaración manual</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Estadísticas del lote
+                totales = stats.get('totales', {})
+                if any(v != 0 for v in totales.values()):
+                    igv_ventas = totales.get('igv_ventas', 0)
+                    igv_compras = totales.get('igv_compras', 0)
+                    renta = totales.get('renta', 0)
+
+                    def _fmt_soles(val):
+                        if val == 0: return "S/ 0"
+                        if abs(val) >= 1_000_000: return f"S/ {val/1_000_000:,.1f}M"
+                        if abs(val) >= 1_000: return f"S/ {val/1_000:,.1f}K"
+                        return f"S/ {val:,.2f}"
 
                     st.markdown(f"""
-                    <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);
-                                border-radius:16px;padding:2rem;margin:1rem 0;color:white;">
-                        <div style="text-align:center;margin-bottom:1.5rem;">
-                            <span style="font-size:2.5rem;">✅</span>
-                            <h2 style="color:#e67e22;margin:0.5rem 0 0 0;">Procesamiento completado</h2>
+                    <div style="background:linear-gradient(135deg,#0f3460 0%,#16213e 100%);
+                                border-radius:12px;padding:1.5rem;margin:0.5rem 0;color:white;">
+                        <div style="text-align:center;margin-bottom:1rem;">
+                            <span style="font-size:1.2rem;">📈</span>
+                            <strong style="color:#e67e22;"> Estadísticas del Lote</strong>
                         </div>
-                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;">
-                            <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
-                                <div style="font-size:2rem;font-weight:bold;color:#e67e22;">{n_formularios}</div>
-                                <div style="font-size:0.85rem;opacity:0.8;">Formularios</div>
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;">
+                            <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
+                                <div style="font-size:1.3rem;font-weight:bold;color:#2ecc71;">{_fmt_soles(igv_ventas)}</div>
+                                <div style="font-size:0.75rem;opacity:0.7;">IGV Ventas (C101)</div>
                             </div>
-                            <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
-                                <div style="font-size:2rem;font-weight:bold;color:#2ecc71;">{n_casillas}</div>
-                                <div style="font-size:0.85rem;opacity:0.8;">Registros extraídos</div>
+                            <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
+                                <div style="font-size:1.3rem;font-weight:bold;color:#e74c3c;">{_fmt_soles(igv_compras)}</div>
+                                <div style="font-size:0.75rem;opacity:0.7;">IGV Compras (C108)</div>
                             </div>
-                            <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
-                                <div style="font-size:2rem;font-weight:bold;color:#3498db;">{n_empresas}</div>
-                                <div style="font-size:0.85rem;opacity:0.8;">Empresas</div>
+                            <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
+                                <div style="font-size:1.3rem;font-weight:bold;color:#f39c12;">{_fmt_soles(renta)}</div>
+                                <div style="font-size:0.75rem;opacity:0.7;">Renta (C312)</div>
                             </div>
-                            <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
-                                <div style="font-size:2rem;font-weight:bold;color:#9b59b6;">{n_periodos}</div>
-                                <div style="font-size:0.85rem;opacity:0.8;">Períodos</div>
-                            </div>
-                        </div>
-                        <div style="background:rgba(46,204,113,0.15);border-radius:12px;padding:1rem;margin-top:1rem;text-align:center;">
-                            <div style="font-size:0.9rem;opacity:0.8;">Tiempo estimado ahorrado</div>
-                            <div style="font-size:1.8rem;font-weight:bold;color:#2ecc71;">⏱️ {tiempo_str}</div>
-                            <div style="font-size:0.8rem;opacity:0.6;">vs ~30 min por declaración manual</div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # Estadísticas del lote
-                    totales = stats.get('totales', {})
-                    if any(v != 0 for v in totales.values()):
-                        igv_ventas = totales.get('igv_ventas', 0)
-                        igv_compras = totales.get('igv_compras', 0)
-                        renta = totales.get('renta', 0)
+                if n_errores > 0:
+                    st.warning(f"⚠️ {n_errores} archivo(s) con errores — revisa el detalle abajo")
 
-                        def _fmt_soles(val):
-                            if val == 0: return "S/ 0"
-                            if abs(val) >= 1_000_000: return f"S/ {val/1_000_000:,.1f}M"
-                            if abs(val) >= 1_000: return f"S/ {val/1_000:,.1f}K"
-                            return f"S/ {val:,.2f}"
+                # Validaciones automáticas
+                warnings = stats.get('warnings', [])
+                if warnings:
+                    with st.expander(f"🔍 Validaciones automáticas — {len(warnings)} advertencia(s)", expanded=False):
+                        for w in warnings:
+                            icon = "⚠️" if w['severidad'] == 'warning' else "ℹ️"
+                            st.markdown(f"{icon} **{w['mensaje']}**")
 
-                        st.markdown(f"""
-                        <div style="background:linear-gradient(135deg,#0f3460 0%,#16213e 100%);
-                                    border-radius:12px;padding:1.5rem;margin:0.5rem 0;color:white;">
-                            <div style="text-align:center;margin-bottom:1rem;">
-                                <span style="font-size:1.2rem;">📈</span>
-                                <strong style="color:#e67e22;"> Estadísticas del Lote</strong>
-                            </div>
-                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;">
-                                <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
-                                    <div style="font-size:1.3rem;font-weight:bold;color:#2ecc71;">{_fmt_soles(igv_ventas)}</div>
-                                    <div style="font-size:0.75rem;opacity:0.7;">IGV Ventas (C101)</div>
-                                </div>
-                                <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
-                                    <div style="font-size:1.3rem;font-weight:bold;color:#e74c3c;">{_fmt_soles(igv_compras)}</div>
-                                    <div style="font-size:0.75rem;opacity:0.7;">IGV Compras (C108)</div>
-                                </div>
-                                <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
-                                    <div style="font-size:1.3rem;font-weight:bold;color:#f39c12;">{_fmt_soles(renta)}</div>
-                                    <div style="font-size:0.75rem;opacity:0.7;">Renta (C312)</div>
-                                </div>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
+                # Logs
+                with st.expander("📋 Detalle del procesamiento", expanded=False):
+                    for log_line in logs:
+                        st.text(log_line)
 
-                    if n_errores > 0:
-                        st.warning(f"⚠️ {n_errores} archivo(s) con errores — revisa el detalle abajo")
-
-                    # Validaciones automáticas
-                    warnings = stats.get('warnings', [])
-                    if warnings:
-                        with st.expander(f"🔍 Validaciones automáticas — {len(warnings)} advertencia(s)", expanded=False):
-                            for w in warnings:
-                                icon = "⚠️" if w['severidad'] == 'warning' else "ℹ️"
-                                st.markdown(f"{icon} **{w['mensaje']}**")
-
-                    # Logs
-                    with st.expander("📋 Detalle del procesamiento", expanded=False):
-                        for log_line in logs:
-                            st.text(log_line)
-
-                    # Botones de descarga
-                    col_dl1, col_dl2 = st.columns(2)
-                    with col_dl1:
+                # Botones de descarga
+                col_dl1, col_dl2 = st.columns(2)
+                with col_dl1:
+                    st.download_button(
+                        label="📥 Descargar Excel Consolidado",
+                        data=excel_bytes,
+                        file_name="ContaFlash_621_Consolidado.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        type="primary",
+                    )
+                with col_dl2:
+                    if df is not None:
+                        csv_bytes = df.to_csv(index=False).encode('utf-8')
                         st.download_button(
-                            label="📥 Descargar Excel Consolidado",
-                            data=excel_bytes,
-                            file_name="ContaFlash_621_Consolidado.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            type="primary",
+                            label="📄 Descargar CSV",
+                            data=csv_bytes,
+                            file_name="ContaFlash_621_Consolidado.csv",
+                            mime="text/csv",
                         )
-                    with col_dl2:
-                        if df is not None:
-                            csv_bytes = df.to_csv(index=False).encode('utf-8')
-                            st.download_button(
-                                label="📄 Descargar CSV",
-                                data=csv_bytes,
-                                file_name="ContaFlash_621_Consolidado.csv",
-                                mime="text/csv",
-                            )
 
-                    # Consolidación inteligente
-                    if df is not None and len(df) > 0:
-                        st.markdown("---")
-                        st.markdown("### 📊 Consolidación Inteligente")
-                        st.markdown("Elige cómo quieres ver tus datos:")
+                # Consolidación inteligente
+                if df is not None and len(df) > 0:
+                    st.markdown("---")
+                    st.markdown("### 📊 Consolidación Inteligente")
+                    st.markdown("Elige cómo quieres ver tus datos:")
 
-                        col1, col2, col3, col4, col5 = st.columns(5)
-                        with col1:
-                            btn_ruc = st.button("🏢 Por RUC", key="btn_ruc")
-                        with col2:
-                            btn_periodo = st.button("📅 Por Período", key="btn_periodo")
-                        with col3:
-                            btn_empresa = st.button("🏭 Por Empresa", key="btn_empresa")
-                        with col4:
-                            btn_mes = st.button("📆 Por Mes", key="btn_mes")
-                        with col5:
-                            btn_general = st.button("📋 General", key="btn_general")
+                    vista_pdf = st.radio(
+                        "Vista de consolidación:",
+                        ["📋 General", "🏢 Por RUC", "📅 Por Período", "🏭 Por Empresa", "📆 Por Mes"],
+                        key="vista_consolidado_pdf",
+                        horizontal=True,
+                    )
 
-                        casilla_cols = [c for c in df.columns if c.startswith('C') and c[1:].isdigit()]
-                        display_cols = ['RUC', 'Razon_Social', 'Periodo'] + casilla_cols[:5]
-                        display_cols = [c for c in display_cols if c in df.columns]
+                    casilla_cols = [c for c in df.columns if c.startswith('C') and c[1:].isdigit()]
+                    display_cols = ['RUC', 'Razon_Social', 'Periodo'] + casilla_cols[:5]
+                    display_cols = [c for c in display_cols if c in df.columns]
 
-                        if btn_ruc and 'RUC' in df.columns:
-                            st.markdown("**Vista por RUC:**")
-                            for ruc in sorted(df['RUC'].dropna().unique()):
-                                ruc_df = df[df['RUC'] == ruc]
-                                razon = ruc_df['Razon_Social'].iloc[0] if 'Razon_Social' in ruc_df.columns else ''
-                                with st.expander(f"🏢 {ruc} — {razon} ({len(ruc_df)} declaración(es))"):
-                                    st.dataframe(ruc_df[display_cols], use_container_width=True, hide_index=True)
+                    if vista_pdf == "📋 General":
+                        st.markdown("**Vista general:**")
+                        st.dataframe(df[display_cols], use_container_width=True, hide_index=True)
 
-                        elif btn_periodo and 'Periodo' in df.columns:
-                            st.markdown("**Vista por Período:**")
-                            for periodo in sorted(df['Periodo'].dropna().unique()):
-                                per_df = df[df['Periodo'] == periodo]
-                                with st.expander(f"📅 {periodo} ({len(per_df)} declaración(es))"):
-                                    st.dataframe(per_df[display_cols], use_container_width=True, hide_index=True)
+                    elif vista_pdf == "🏢 Por RUC" and 'RUC' in df.columns:
+                        st.markdown("**Vista por RUC:**")
+                        for ruc in sorted(df['RUC'].dropna().unique()):
+                            ruc_df = df[df['RUC'] == ruc]
+                            razon = ruc_df['Razon_Social'].iloc[0] if 'Razon_Social' in ruc_df.columns else ''
+                            with st.expander(f"🏢 {ruc} — {razon} ({len(ruc_df)} declaración(es))"):
+                                st.dataframe(ruc_df[display_cols], use_container_width=True, hide_index=True)
 
-                        elif btn_empresa and 'Razon_Social' in df.columns:
-                            st.markdown("**Vista por Empresa:**")
-                            for empresa in sorted(df['Razon_Social'].dropna().unique()):
-                                emp_df = df[df['Razon_Social'] == empresa]
-                                with st.expander(f"🏭 {empresa} ({len(emp_df)} declaración(es))"):
-                                    st.dataframe(emp_df[display_cols], use_container_width=True, hide_index=True)
+                    elif vista_pdf == "📅 Por Período" and 'Periodo' in df.columns:
+                        st.markdown("**Vista por Período:**")
+                        for periodo in sorted(df['Periodo'].dropna().unique()):
+                            per_df = df[df['Periodo'] == periodo]
+                            with st.expander(f"📅 {periodo} ({len(per_df)} declaración(es))"):
+                                st.dataframe(per_df[display_cols], use_container_width=True, hide_index=True)
 
-                        elif btn_mes and 'Periodo' in df.columns:
-                            st.markdown("**Vista por Mes:**")
-                            df['_Mes'] = df['Periodo'].str[:7] if df['Periodo'].str.len() >= 7 else df['Periodo']
-                            for mes in sorted(df['_Mes'].dropna().unique()):
-                                mes_df = df[df['_Mes'] == mes]
-                                with st.expander(f"📆 {mes} ({len(mes_df)} declaración(es))"):
-                                    st.dataframe(mes_df[display_cols], use_container_width=True, hide_index=True)
+                    elif vista_pdf == "🏭 Por Empresa" and 'Razon_Social' in df.columns:
+                        st.markdown("**Vista por Empresa:**")
+                        for empresa in sorted(df['Razon_Social'].dropna().unique()):
+                            emp_df = df[df['Razon_Social'] == empresa]
+                            with st.expander(f"🏭 {empresa} ({len(emp_df)} declaración(es))"):
+                                st.dataframe(emp_df[display_cols], use_container_width=True, hide_index=True)
+
+                    elif vista_pdf == "📆 Por Mes" and 'Periodo' in df.columns:
+                        st.markdown("**Vista por Mes:**")
+                        df['_Mes'] = df['Periodo'].str[:7] if df['Periodo'].str.len() >= 7 else df['Periodo']
+                        for mes in sorted(df['_Mes'].dropna().unique()):
+                            mes_df = df[df['_Mes'] == mes]
+                            with st.expander(f"📆 {mes} ({len(mes_df)} declaración(es))"):
+                                st.dataframe(mes_df[display_cols], use_container_width=True, hide_index=True)
+                        if '_Mes' in df.columns:
                             df.drop('_Mes', axis=1, inplace=True)
 
-                        elif btn_general:
-                            st.markdown("**Vista general:**")
-                            st.dataframe(df[display_cols], use_container_width=True, hide_index=True)
+                st.success(f"✅ Te quedan {remaining_uses()} uso(s) gratuito(s).")
+                st.markdown(
+                    '💡 **¿Tienes otra tarea contable que te quite horas?** '
+                    'Cuéntanos y te proponemos una solución. '
+                    '[Escríbenos por WhatsApp](https://wa.me/51962927872?text=Hola%2C+uso+ContaFlash+y+tengo+otra+tarea+que+me+quita+tiempo%3A+)'
+                )
+            else:
+                st.error("No se pudieron extraer datos de los archivos proporcionados.")
 
-                    st.success(f"✅ Te quedan {remaining_uses()} uso(s) gratuito(s).")
-                    st.markdown(
-                        '💡 **¿Tienes otra tarea contable que te quite horas?** '
-                        'Cuéntanos y te proponemos una solución. '
-                        '[Escríbenos por WhatsApp](https://wa.me/51962927872?text=Hola%2C+uso+ContaFlash+y+tengo+otra+tarea+que+me+quita+tiempo%3A+)'
-                    )
-                else:
-                    st.error("No se pudieron extraer datos de los archivos proporcionados.")
+            # Botón Nueva Carga
+            st.markdown("---")
+            if st.button("🔄 Nueva Carga", key="btn_new_pdf"):
+                st.session_state[PDF_RESULTS_KEY] = None
+                st.rerun()
 
 
 # ─────────────────────────────────────────────────────────
@@ -641,198 +656,205 @@ with tab_excel:
         else:
             if st.button("🚀 Consolidar archivos", key="btn_excel", type="primary"):
                 with st.spinner("Consolidando..."):
-                    excel_bytes, stats, logs, df = consolidate_uploaded_excels(
+                    _results = consolidate_uploaded_excels(
                         uploaded_excels, empresa_name
                     )
+                st.session_state[EXCEL_RESULTS_KEY] = _results
 
-                with st.expander("📋 Detalle del procesamiento", expanded=True):
-                    for log_line in logs:
-                        st.text(log_line)
+        # Renderizar resultados desde session_state (persiste entre reruns)
+        if st.session_state[EXCEL_RESULTS_KEY] is not None:
+            excel_bytes, stats, logs, df = st.session_state[EXCEL_RESULTS_KEY]
 
-                if excel_bytes:
-                    increment_usage()
+            with st.expander("📋 Detalle del procesamiento", expanded=True):
+                for log_line in logs:
+                    st.text(log_line)
 
-                    # Panel de resultados
-                    n_formularios = stats['ok']
-                    n_casillas = stats.get('n_casillas', 0)
-                    n_periodos = len(stats.get('periodos', []))
-                    n_empresas = stats.get('empresas', 1)
-                    n_errores = stats['errors']
-                    tiempo_ahorrado_min = n_formularios * 30
-                    horas = tiempo_ahorrado_min // 60
-                    minutos = tiempo_ahorrado_min % 60
-                    tiempo_str = f"{horas}h {minutos}min" if horas > 0 else f"{minutos}min"
+            if excel_bytes:
+                increment_usage()
+
+                # Panel de resultados
+                n_formularios = stats['ok']
+                n_casillas = stats.get('n_casillas', 0)
+                n_periodos = len(stats.get('periodos', []))
+                n_empresas = stats.get('empresas', 1)
+                n_errores = stats['errors']
+                tiempo_ahorrado_min = n_formularios * 30
+                horas = tiempo_ahorrado_min // 60
+                minutos = tiempo_ahorrado_min % 60
+                tiempo_str = f"{horas}h {minutos}min" if horas > 0 else f"{minutos}min"
+
+                st.markdown(f"""
+                <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);
+                            border-radius:16px;padding:2rem;margin:1rem 0;color:white;">
+                    <div style="text-align:center;margin-bottom:1.5rem;">
+                        <span style="font-size:2.5rem;">✅</span>
+                        <h2 style="color:#e67e22;margin:0.5rem 0 0 0;">Consolidación completada</h2>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;">
+                        <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
+                            <div style="font-size:2rem;font-weight:bold;color:#e67e22;">{n_formularios}</div>
+                            <div style="font-size:0.85rem;opacity:0.8;">Formularios</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
+                            <div style="font-size:2rem;font-weight:bold;color:#2ecc71;">{n_casillas}</div>
+                            <div style="font-size:0.85rem;opacity:0.8;">Registros extraídos</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
+                            <div style="font-size:2rem;font-weight:bold;color:#3498db;">{n_empresas}</div>
+                            <div style="font-size:0.85rem;opacity:0.8;">Empresas</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
+                            <div style="font-size:2rem;font-weight:bold;color:#9b59b6;">{n_periodos}</div>
+                            <div style="font-size:0.85rem;opacity:0.8;">Períodos</div>
+                        </div>
+                    </div>
+                    <div style="background:rgba(46,204,113,0.15);border-radius:12px;padding:1rem;margin-top:1rem;text-align:center;">
+                        <div style="font-size:0.9rem;opacity:0.8;">Tiempo estimado ahorrado</div>
+                        <div style="font-size:1.8rem;font-weight:bold;color:#2ecc71;">⏱️ {tiempo_str}</div>
+                        <div style="font-size:0.8rem;opacity:0.6;">vs ~30 min por declaración manual</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Estadísticas del lote
+                totales = stats.get('totales', {})
+                if any(v != 0 for v in totales.values()):
+                    igv_ventas = totales.get('igv_ventas', 0)
+                    igv_compras = totales.get('igv_compras', 0)
+                    renta = totales.get('renta', 0)
+
+                    def _fmt_soles(val):
+                        if val == 0: return "S/ 0"
+                        if abs(val) >= 1_000_000: return f"S/ {val/1_000_000:,.1f}M"
+                        if abs(val) >= 1_000: return f"S/ {val/1_000:,.1f}K"
+                        return f"S/ {val:,.2f}"
 
                     st.markdown(f"""
-                    <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);
-                                border-radius:16px;padding:2rem;margin:1rem 0;color:white;">
-                        <div style="text-align:center;margin-bottom:1.5rem;">
-                            <span style="font-size:2.5rem;">✅</span>
-                            <h2 style="color:#e67e22;margin:0.5rem 0 0 0;">Consolidación completada</h2>
+                    <div style="background:linear-gradient(135deg,#0f3460 0%,#16213e 100%);
+                                border-radius:12px;padding:1.5rem;margin:0.5rem 0;color:white;">
+                        <div style="text-align:center;margin-bottom:1rem;">
+                            <span style="font-size:1.2rem;">📈</span>
+                            <strong style="color:#e67e22;"> Estadísticas del Lote</strong>
                         </div>
-                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;">
-                            <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
-                                <div style="font-size:2rem;font-weight:bold;color:#e67e22;">{n_formularios}</div>
-                                <div style="font-size:0.85rem;opacity:0.8;">Formularios</div>
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;">
+                            <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
+                                <div style="font-size:1.3rem;font-weight:bold;color:#2ecc71;">{_fmt_soles(igv_ventas)}</div>
+                                <div style="font-size:0.75rem;opacity:0.7;">IGV Ventas (C101)</div>
                             </div>
-                            <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
-                                <div style="font-size:2rem;font-weight:bold;color:#2ecc71;">{n_casillas}</div>
-                                <div style="font-size:0.85rem;opacity:0.8;">Registros extraídos</div>
+                            <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
+                                <div style="font-size:1.3rem;font-weight:bold;color:#e74c3c;">{_fmt_soles(igv_compras)}</div>
+                                <div style="font-size:0.75rem;opacity:0.7;">IGV Compras (C108)</div>
                             </div>
-                            <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
-                                <div style="font-size:2rem;font-weight:bold;color:#3498db;">{n_empresas}</div>
-                                <div style="font-size:0.85rem;opacity:0.8;">Empresas</div>
+                            <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
+                                <div style="font-size:1.3rem;font-weight:bold;color:#f39c12;">{_fmt_soles(renta)}</div>
+                                <div style="font-size:0.75rem;opacity:0.7;">Renta (C312)</div>
                             </div>
-                            <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
-                                <div style="font-size:2rem;font-weight:bold;color:#9b59b6;">{n_periodos}</div>
-                                <div style="font-size:0.85rem;opacity:0.8;">Períodos</div>
-                            </div>
-                        </div>
-                        <div style="background:rgba(46,204,113,0.15);border-radius:12px;padding:1rem;margin-top:1rem;text-align:center;">
-                            <div style="font-size:0.9rem;opacity:0.8;">Tiempo estimado ahorrado</div>
-                            <div style="font-size:1.8rem;font-weight:bold;color:#2ecc71;">⏱️ {tiempo_str}</div>
-                            <div style="font-size:0.8rem;opacity:0.6;">vs ~30 min por declaración manual</div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
 
-                    # Estadísticas del lote
-                    totales = stats.get('totales', {})
-                    if any(v != 0 for v in totales.values()):
-                        igv_ventas = totales.get('igv_ventas', 0)
-                        igv_compras = totales.get('igv_compras', 0)
-                        renta = totales.get('renta', 0)
+                if n_errores > 0:
+                    st.warning(f"⚠️ {n_errores} archivo(s) con errores — revisa el detalle abajo")
 
-                        def _fmt_soles(val):
-                            if val == 0: return "S/ 0"
-                            if abs(val) >= 1_000_000: return f"S/ {val/1_000_000:,.1f}M"
-                            if abs(val) >= 1_000: return f"S/ {val/1_000:,.1f}K"
-                            return f"S/ {val:,.2f}"
+                # Validaciones automáticas
+                warnings = stats.get('warnings', [])
+                if warnings:
+                    with st.expander(f"🔍 Validaciones automáticas — {len(warnings)} advertencia(s)", expanded=False):
+                        for w in warnings:
+                            icon = "⚠️" if w['severidad'] == 'warning' else "ℹ️"
+                            st.markdown(f"{icon} **{w['mensaje']}**")
 
-                        st.markdown(f"""
-                        <div style="background:linear-gradient(135deg,#0f3460 0%,#16213e 100%);
-                                    border-radius:12px;padding:1.5rem;margin:0.5rem 0;color:white;">
-                            <div style="text-align:center;margin-bottom:1rem;">
-                                <span style="font-size:1.2rem;">📈</span>
-                                <strong style="color:#e67e22;"> Estadísticas del Lote</strong>
-                            </div>
-                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;">
-                                <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
-                                    <div style="font-size:1.3rem;font-weight:bold;color:#2ecc71;">{_fmt_soles(igv_ventas)}</div>
-                                    <div style="font-size:0.75rem;opacity:0.7;">IGV Ventas (C101)</div>
-                                </div>
-                                <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
-                                    <div style="font-size:1.3rem;font-weight:bold;color:#e74c3c;">{_fmt_soles(igv_compras)}</div>
-                                    <div style="font-size:0.75rem;opacity:0.7;">IGV Compras (C108)</div>
-                                </div>
-                                <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
-                                    <div style="font-size:1.3rem;font-weight:bold;color:#f39c12;">{_fmt_soles(renta)}</div>
-                                    <div style="font-size:0.75rem;opacity:0.7;">Renta (C312)</div>
-                                </div>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
+                # Logs
+                with st.expander("📋 Detalle del procesamiento", expanded=False):
+                    for log_line in logs:
+                        st.text(log_line)
 
-                    if n_errores > 0:
-                        st.warning(f"⚠️ {n_errores} archivo(s) con errores — revisa el detalle abajo")
-
-                    # Validaciones automáticas
-                    warnings = stats.get('warnings', [])
-                    if warnings:
-                        with st.expander(f"🔍 Validaciones automáticas — {len(warnings)} advertencia(s)", expanded=False):
-                            for w in warnings:
-                                icon = "⚠️" if w['severidad'] == 'warning' else "ℹ️"
-                                st.markdown(f"{icon} **{w['mensaje']}**")
-
-                    # Logs
-                    with st.expander("📋 Detalle del procesamiento", expanded=False):
-                        for log_line in logs:
-                            st.text(log_line)
-
-                    col_dl1, col_dl2 = st.columns(2)
-                    with col_dl1:
+                col_dl1, col_dl2 = st.columns(2)
+                with col_dl1:
+                    st.download_button(
+                        label="📥 Descargar Consolidado",
+                        data=excel_bytes,
+                        file_name="ContaFlash_Consolidado_PDT621.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        type="primary",
+                    )
+                with col_dl2:
+                    if df is not None:
+                        csv_bytes = df.to_csv(index=False).encode('utf-8')
                         st.download_button(
-                            label="📥 Descargar Consolidado",
-                            data=excel_bytes,
-                            file_name="ContaFlash_Consolidado_PDT621.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            type="primary",
+                            label="📄 Descargar CSV",
+                            data=csv_bytes,
+                            file_name="ContaFlash_Consolidado_PDT621.csv",
+                            mime="text/csv",
                         )
-                    with col_dl2:
-                        if df is not None:
-                            csv_bytes = df.to_csv(index=False).encode('utf-8')
-                            st.download_button(
-                                label="📄 Descargar CSV",
-                                data=csv_bytes,
-                                file_name="ContaFlash_Consolidado_PDT621.csv",
-                                mime="text/csv",
-                            )
 
-                    # Consolidación inteligente
-                    if df is not None and len(df) > 0:
-                        st.markdown("---")
-                        st.markdown("### 📊 Consolidación Inteligente")
-                        st.markdown("Elige cómo quieres ver tus datos:")
+                # Consolidación inteligente
+                if df is not None and len(df) > 0:
+                    st.markdown("---")
+                    st.markdown("### 📊 Consolidación Inteligente")
+                    st.markdown("Elige cómo quieres ver tus datos:")
 
-                        col1, col2, col3, col4, col5 = st.columns(5)
-                        with col1:
-                            btn_ruc = st.button("🏢 Por RUC", key="btn_ruc_excel")
-                        with col2:
-                            btn_periodo = st.button("📅 Por Período", key="btn_periodo_excel")
-                        with col3:
-                            btn_empresa = st.button("🏭 Por Empresa", key="btn_empresa_excel")
-                        with col4:
-                            btn_mes = st.button("📆 Por Mes", key="btn_mes_excel")
-                        with col5:
-                            btn_general = st.button("📋 General", key="btn_general_excel")
+                    vista_excel = st.radio(
+                        "Vista de consolidación:",
+                        ["📋 General", "🏢 Por RUC", "📅 Por Período", "🏭 Por Empresa", "📆 Por Mes"],
+                        key="vista_consolidado_excel",
+                        horizontal=True,
+                    )
 
-                        casilla_cols = [c for c in df.columns if c.startswith('C') and c[1:].isdigit()]
-                        display_cols = ['RUC', 'Razon_Social', 'Periodo'] + casilla_cols[:5]
-                        display_cols = [c for c in display_cols if c in df.columns]
+                    casilla_cols = [c for c in df.columns if c.startswith('C') and c[1:].isdigit()]
+                    display_cols = ['RUC', 'Razon_Social', 'Periodo'] + casilla_cols[:5]
+                    display_cols = [c for c in display_cols if c in df.columns]
 
-                        if btn_ruc and 'RUC' in df.columns:
-                            st.markdown("**Vista por RUC:**")
-                            for ruc in sorted(df['RUC'].dropna().unique()):
-                                ruc_df = df[df['RUC'] == ruc]
-                                razon = ruc_df['Razon_Social'].iloc[0] if 'Razon_Social' in ruc_df.columns else ''
-                                with st.expander(f"🏢 {ruc} — {razon} ({len(ruc_df)} declaración(es))"):
-                                    st.dataframe(ruc_df[display_cols], use_container_width=True, hide_index=True)
+                    if vista_excel == "📋 General":
+                        st.markdown("**Vista general:**")
+                        st.dataframe(df[display_cols], use_container_width=True, hide_index=True)
 
-                        elif btn_periodo and 'Periodo' in df.columns:
-                            st.markdown("**Vista por Período:**")
-                            for periodo in sorted(df['Periodo'].dropna().unique()):
-                                per_df = df[df['Periodo'] == periodo]
-                                with st.expander(f"📅 {periodo} ({len(per_df)} declaración(es))"):
-                                    st.dataframe(per_df[display_cols], use_container_width=True, hide_index=True)
+                    elif vista_excel == "🏢 Por RUC" and 'RUC' in df.columns:
+                        st.markdown("**Vista por RUC:**")
+                        for ruc in sorted(df['RUC'].dropna().unique()):
+                            ruc_df = df[df['RUC'] == ruc]
+                            razon = ruc_df['Razon_Social'].iloc[0] if 'Razon_Social' in ruc_df.columns else ''
+                            with st.expander(f"🏢 {ruc} — {razon} ({len(ruc_df)} declaración(es))"):
+                                st.dataframe(ruc_df[display_cols], use_container_width=True, hide_index=True)
 
-                        elif btn_empresa and 'Razon_Social' in df.columns:
-                            st.markdown("**Vista por Empresa:**")
-                            for empresa in sorted(df['Razon_Social'].dropna().unique()):
-                                emp_df = df[df['Razon_Social'] == empresa]
-                                with st.expander(f"🏭 {empresa} ({len(emp_df)} declaración(es))"):
-                                    st.dataframe(emp_df[display_cols], use_container_width=True, hide_index=True)
+                    elif vista_excel == "📅 Por Período" and 'Periodo' in df.columns:
+                        st.markdown("**Vista por Período:**")
+                        for periodo in sorted(df['Periodo'].dropna().unique()):
+                            per_df = df[df['Periodo'] == periodo]
+                            with st.expander(f"📅 {periodo} ({len(per_df)} declaración(es))"):
+                                st.dataframe(per_df[display_cols], use_container_width=True, hide_index=True)
 
-                        elif btn_mes and 'Periodo' in df.columns:
-                            st.markdown("**Vista por Mes:**")
-                            df['_Mes'] = df['Periodo'].str[:7] if df['Periodo'].str.len() >= 7 else df['Periodo']
-                            for mes in sorted(df['_Mes'].dropna().unique()):
-                                mes_df = df[df['_Mes'] == mes]
-                                with st.expander(f"📆 {mes} ({len(mes_df)} declaración(es))"):
-                                    st.dataframe(mes_df[display_cols], use_container_width=True, hide_index=True)
+                    elif vista_excel == "🏭 Por Empresa" and 'Razon_Social' in df.columns:
+                        st.markdown("**Vista por Empresa:**")
+                        for empresa in sorted(df['Razon_Social'].dropna().unique()):
+                            emp_df = df[df['Razon_Social'] == empresa]
+                            with st.expander(f"🏭 {empresa} ({len(emp_df)} declaración(es))"):
+                                st.dataframe(emp_df[display_cols], use_container_width=True, hide_index=True)
+
+                    elif vista_excel == "📆 Por Mes" and 'Periodo' in df.columns:
+                        st.markdown("**Vista por Mes:**")
+                        df['_Mes'] = df['Periodo'].str[:7] if df['Periodo'].str.len() >= 7 else df['Periodo']
+                        for mes in sorted(df['_Mes'].dropna().unique()):
+                            mes_df = df[df['_Mes'] == mes]
+                            with st.expander(f"📆 {mes} ({len(mes_df)} declaración(es))"):
+                                st.dataframe(mes_df[display_cols], use_container_width=True, hide_index=True)
+                        if '_Mes' in df.columns:
                             df.drop('_Mes', axis=1, inplace=True)
 
-                        elif btn_general:
-                            st.markdown("**Vista general:**")
-                            st.dataframe(df[display_cols], use_container_width=True, hide_index=True)
+                st.success(f"✅ Te quedan {remaining_uses()} uso(s) gratuito(s).")
+                st.markdown(
+                    '💡 **¿Tienes otra tarea contable que te quite horas?** '
+                    'Cuéntanos y te proponemos una solución. '
+                    '[Escríbenos por WhatsApp](https://wa.me/51962927872?text=Hola%2C+uso+ContaFlash+y+tengo+otra+tarea+que+me+quita+tiempo%3A+)'
+                )
+            else:
+                st.error("No se pudo consolidar. Verifica que los archivos tengan columnas 'Nro Casilla' y 'Valor Casilla'.")
 
-                    st.success(f"✅ Te quedan {remaining_uses()} uso(s) gratuito(s).")
-                    st.markdown(
-                        '💡 **¿Tienes otra tarea contable que te quite horas?** '
-                        'Cuéntanos y te proponemos una solución. '
-                        '[Escríbenos por WhatsApp](https://wa.me/51962927872?text=Hola%2C+uso+ContaFlash+y+tengo+otra+tarea+que+me+quita+tiempo%3A+)'
-                    )
-                else:
-                    st.error("No se pudo consolidar. Verifica que los archivos tengan columnas 'Nro Casilla' y 'Valor Casilla'.")
+            # Botón Nueva Carga
+            st.markdown("---")
+            if st.button("🔄 Nueva Carga", key="btn_new_excel"):
+                st.session_state[EXCEL_RESULTS_KEY] = None
+                st.rerun()
 
 
 
