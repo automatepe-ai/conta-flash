@@ -102,138 +102,224 @@ def remaining_uses() -> int:
 
 
 # ============================================================
-# ESTILOS CUSTOM
+# ESTILOS CUSTOM — Paleta Crema Corporativa
 # ============================================================
 st.markdown("""
 <style>
+    /* === FONDO PRINCIPAL === */
+    .stApp {
+        background-color: #faf7f2;
+    }
+    
+    /* === HEADER === */
     .main-header {
         text-align: center;
-        padding: 1rem 0;
+        padding: 1.5rem 0;
     }
     .main-header h1 {
-        color: #e67e22;
-        font-size: 2.2rem;
+        color: #1e3a5f;
+        font-size: 2.4rem;
+        font-weight: 700;
+        margin-bottom: 0.3rem;
     }
     .main-header p {
-        color: #566573;
+        color: #6b6560;
         font-size: 1.1rem;
+        margin-top: 0;
     }
+    
+    /* === BADGE DE USOS === */
     .usage-badge {
-        background: #f0f3f5;
-        border-radius: 8px;
-        padding: 0.5rem 1rem;
+        background: #f5f0e8;
+        border: 1px solid #e8e0d6;
+        border-radius: 10px;
+        padding: 0.6rem 1.2rem;
         text-align: center;
         font-size: 0.9rem;
-        margin-bottom: 1rem;
+        margin-bottom: 1.2rem;
+        color: #2d2a26;
     }
+    
+    /* === CARDS === */
     .stat-card {
-        background: #f8f9fa;
-        border-left: 4px solid #2ecc71;
-        border-radius: 4px;
+        background: #ffffff;
+        border-left: 4px solid #34d399;
+        border-radius: 8px;
         padding: 1rem;
         margin: 0.5rem 0;
+        border: 1px solid #e8e0d6;
     }
     .stat-card.error {
-        border-left-color: #e74c3c;
+        border-left-color: #ef4444;
     }
+    
+    /* === BLOQUE DE LÍMITE (mantener ROJO como condición) === */
     .block-message {
         text-align: center;
         padding: 2rem;
-        background: #fdf2e9;
+        background: #fef2f2;
         border-radius: 12px;
-        border: 1px solid #f0b27a;
+        border: 2px solid #ef4444;
     }
+    .block-message h3 {
+        color: #dc2626;
+    }
+    .block-message p {
+        color: #2d2a26;
+    }
+    
+    /* === FOOTER OCULTO === */
     footer {visibility: hidden;}
+    
+    /* === TESTIMONIOS === */
     .testimonial-section {
         display: flex;
         justify-content: center;
         gap: 2rem;
         flex-wrap: wrap;
-        margin: 1.5rem 0;
+        margin: 2rem 0;
     }
     .testimonial-card {
-        background: #f8f9fa;
+        background: #ffffff;
         border-radius: 12px;
-        padding: 1.2rem;
-        max-width: 280px;
+        padding: 1.5rem;
+        max-width: 300px;
         text-align: center;
-        border: 1px solid #e8e8e8;
-    }
-    .testimonial-card img {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        object-fit: cover;
-        margin-bottom: 0.5rem;
+        border: 1px solid #e8e0d6;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
     .testimonial-avatar {
-        width: 60px;
-        height: 60px;
+        width: 64px;
+        height: 64px;
         border-radius: 50%;
-        background: #e67e22;
-        color: white;
-        font-size: 1.5rem;
+        background: #1e3a5f;
+        color: #ffffff;
+        font-size: 1.6rem;
         font-weight: bold;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 0 auto 0.5rem auto;
+        margin: 0 auto 0.8rem auto;
     }
     .testimonial-card p {
-        font-size: 0.9rem;
-        color: #555;
+        font-size: 0.95rem;
+        color: #2d2a26;
         font-style: italic;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.8rem;
+        line-height: 1.5;
     }
     .testimonial-card .name {
-        font-weight: bold;
-        color: #333;
-        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e3a5f;
+        font-size: 0.9rem;
     }
     .testimonial-card .role {
-        color: #888;
-        font-size: 0.75rem;
+        color: #6b6560;
+        font-size: 0.8rem;
+    }
+    
+    /* === BOTONES PRIMARIOS (azul oscuro) === */
+    .stButton > button[kind="primary"],
+    button[data-testid="stBaseButton-primary"] {
+        background-color: #1e3a5f;
+        border-color: #1e3a5f;
+        color: #ffffff;
+    }
+    .stButton > button[kind="primary"]:hover,
+    button[data-testid="stBaseButton-primary"]:hover {
+        background-color: #162d4a;
+        border-color: #162d4a;
+    }
+    
+    /* === BOTÓN SECUNDARIO (WhatsApp verde) === */
+    .stMarkdown a[href*="wa.me"] {
+        background-color: #25D366;
+        color: #ffffff !important;
+        padding: 0.4rem 1rem;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: background-color 0.2s;
+    }
+    .stMarkdown a[href*="wa.me"]:hover {
+        background-color: #1da851;
+    }
+    
+    /* === SIDEBAR === */
+    section[data-testid="stSidebar"] {
+        background-color: #f5f0e8;
+    }
+    section[data-testid="stSidebar"] .stMarkdown {
+        color: #2d2a26;
+    }
+    
+    /* === TABS (estilo sutil) === */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0;
+        background-color: #f5f0e8;
+        border-radius: 8px;
+        padding: 4px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 6px;
+        padding: 10px 20px;
+        font-weight: 500;
+        color: #6b6560;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #ffffff;
+        color: #1e3a5f;
+        border-bottom: none;
+        font-weight: 600;
+    }
+    .stTabs [data-baseweb="tab-border"] {
+        display: none;
+    }
+    .stTabs [data-baseweb="tab-highlight"] {
+        display: none;
     }
 </style>
 """, unsafe_allow_html=True)
 
 
 # ============================================================
-# SIDEBAR: CÓDIGO PRO
+# SIDEBAR: CÓDIGO PRO (Compacto)
 # ============================================================
 with st.sidebar:
-    st.markdown("### 🔑 Acceso Pro")
     if is_pro():
         st.success(f"✅ Plan Pro activo — {st.session_state[PRO_CLIENT_KEY]}")
-        if st.button("Cerrar sesión Pro"):
+        if st.button("Cerrar sesión Pro", use_container_width=True):
             st.session_state[PRO_KEY] = False
             st.session_state[PRO_CLIENT_KEY] = ""
             _save_state()
             st.rerun()
     else:
-        st.markdown("¿Ya tienes un código Pro? Ingrésalo aquí:")
-        pro_input = st.text_input(
-            "Código Pro",
-            type="password",
-            placeholder="Ej: CF-XXXX-XXXX",
-            key="pro_code_input",
-        )
-        if st.button("Activar", key="btn_activate_pro"):
-            if pro_input:
-                valid, client_name = validate_pro_code(pro_input)
-                if valid:
-                    st.session_state[PRO_KEY] = True
-                    st.session_state[PRO_CLIENT_KEY] = client_name
-                    _save_state()
-                    st.rerun()
+        with st.expander("🔑 **Acceso Pro**", expanded=True):
+            st.markdown("¿Ya tienes un código?")
+            pro_input = st.text_input(
+                "Código",
+                type="password",
+                placeholder="CF-XXXX-XXXX",
+                key="pro_code_input",
+                label_visibility="collapsed",
+            )
+            if st.button("Activar", key="btn_activate_pro", use_container_width=True):
+                if pro_input:
+                    valid, client_name = validate_pro_code(pro_input)
+                    if valid:
+                        st.session_state[PRO_KEY] = True
+                        st.session_state[PRO_CLIENT_KEY] = client_name
+                        _save_state()
+                        st.rerun()
+                    else:
+                        st.error("Código inválido.")
                 else:
-                    st.error("Código inválido. Verifica e intenta de nuevo.")
-            else:
-                st.warning("Ingresa tu código Pro.")
+                    st.warning("Ingresa tu código.")
+        
         st.markdown("---")
         st.markdown(
-            "**¿Quieres acceso ilimitado?**\n\n"
-            "📱 [Contactar por WhatsApp](https://wa.me/51962927872?text=Hola%2C+quiero+un+código+Pro+de+ContaFlash)"
+            "**¿Acceso ilimitado?**\n\n"
+            "📱 [WhatsApp](https://wa.me/51962927872?text=Hola%2C+quiero+un+código+Pro+de+ContaFlash)"
         )
 
 # ============================================================
@@ -267,20 +353,6 @@ else:
         'Usos gratuitos agotados — <strong>Contacta para acceso completo</strong></div>',
         unsafe_allow_html=True
     )
-
-# ============================================================
-# TESTIMONIOS
-# ============================================================
-st.markdown("""
-<div class="testimonial-section">
-    <div class="testimonial-card">
-        <div class="testimonial-avatar">S</div>
-        <p>"Antes me tomaba toda la tarde copiar las casillas del 621. Ahora subo los PDFs y en segundos tengo todo en Excel."</p>
-        <div class="name">Sandra M.</div>
-        <div class="role">Contadora independiente</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
 
 # ============================================================
 # TABS PRINCIPALES
@@ -819,3 +891,17 @@ with tab_info:
         "[Contacto](https://wa.me/51962927872?text=Hola%2C+consulta+sobre+ContaFlash) · "
         "© 2026 ContaFlash"
     )
+
+# ============================================================
+# TESTIMONIOS (al final)
+# ============================================================
+st.markdown("""
+<div class="testimonial-section">
+    <div class="testimonial-card">
+        <div class="testimonial-avatar">S</div>
+        <p>"Antes me tomaba toda la tarde copiar las casillas del 621. Ahora subo los PDFs y en segundos tengo todo en Excel."</p>
+        <div class="name">Sandra M.</div>
+        <div class="role">Contadora independiente</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
