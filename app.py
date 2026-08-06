@@ -389,9 +389,12 @@ tab_pdf, tab_excel, tab_info, tab_validacion = st.tabs([
 with tab_pdf:
     st.markdown("### Extrae datos del Formulario 621 desde PDFs")
     st.markdown(
-        "Sube archivos **PDF** de declaraciones SUNAT (Formulario 621) "
-        "o **ZIPs** que contengan PDFs. Se generará un Excel consolidado "
-        "con todas las casillas extraídas."
+        "Sube PDFs del **Formulario 621** generados desde SUNAT "
+        "(o **ZIPs** que contengan estos PDFs).\n\n"
+        "**⚠️ Solo acepta:**\n"
+        "- PDFs descargados de SUNAT (no escaneados)\n"
+        "- Formato: IGV - Renta Mensual (F.621)\n"
+        "- No acepta: Formularios 622, 625, ni otros"
     )
 
     uploaded_pdfs = st.file_uploader(
@@ -629,9 +632,12 @@ with tab_pdf:
 with tab_excel:
     st.markdown("### Consolida archivos Excel/CSV del PDT 621")
     st.markdown(
-        "Sube archivos **Excel** o **CSV** exportados del PDT 621 "
-        "(con columnas Nro Casilla y Valor Casilla). "
-        "Se generará un Excel consolidado con una fila por período."
+        "Sube archivos **Excel** o **CSV** exportados del PDT 621.\n\n"
+        "**Requisitos:**\n"
+        "- Columnas obligatorias: **Nro Casilla** y **Valor Casilla**\n"
+        "- CSV: separador punto y coma (`;`)\n"
+        "- Excel: `.xlsx` o `.xls`\n\n"
+        "💡 *Tip: En el PDT, ve a Reportes → Exportar datos*"
     )
 
     empresa_name = st.text_input(
