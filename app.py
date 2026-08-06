@@ -968,7 +968,7 @@ with tab_validacion:
     st.markdown("---")
     st.markdown("#### Quiénes probaron ContaFlash")
 
-    col_lucy, col_omar = st.columns(2)
+    col_lucy, col_ellie = st.columns(2)
 
     with col_lucy:
         st.markdown("""
@@ -980,13 +980,13 @@ with tab_validacion:
         </div>
         """, unsafe_allow_html=True)
 
-    with col_omar:
+    with col_ellie:
         st.markdown("""
         <div class="validation-card">
             <span class="validation-badge">✅ Validado</span>
-            <div class="validation-name">Omar</div>
-            <div class="validation-role">Emprendedor / Marketero</div>
-            <p>Consolidó múltiples archivos Excel del PDT 621. Verificó que los totales coincidieran con los reportes originales.</p>
+            <div class="validation-name">Ellie</div>
+            <div class="validation-role">Contadora independiente</div>
+            <p>Lo que antes me tomaba toda la tarde, ahora me toma 30 segundos para subir los PDFs y tener el Excel listo.</p>
         </div>
         """, unsafe_allow_html=True)
 
