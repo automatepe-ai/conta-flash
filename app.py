@@ -298,6 +298,10 @@ st.markdown("""
     .stTabs [data-baseweb="tab-highlight"] {
         display: none;
     }
+    /* Ocultar toolbar de st.dataframe (download, view, fullscreen) */
+    [data-testid="stDataFrameToolbar"] {
+        display: none !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -451,11 +455,6 @@ with tab_pdf:
                     periodos_permitidos = periodos_unicos[-3:]
                     df = df[df['Periodo'].isin(periodos_permitidos)]
 
-            # Mostrar logs (colapsado por defecto)
-            with st.expander("📋 Detalle del procesamiento", expanded=False):
-                for log_line in logs:
-                    st.text(log_line)
-
             if excel_bytes:
                 increment_usage()
 
@@ -527,7 +526,7 @@ with tab_pdf:
 
                     st.markdown(f"""
                     <div style="background:linear-gradient(135deg,#0f3460 0%,#16213e 100%);
-                                border-radius:12px;padding:1rem;margin:0.5rem 0;color:white;">
+                                border-radius:12px;padding:1rem;margin:0.5rem 0 1.5rem 0;color:white;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem;">
                             <span style="font-size:1rem;font-weight:700;color:#e67e22;">📊 Resumen por RUC</span>
                             <span style="font-size:0.8rem;opacity:0.7;">{len(empresas_stats)} empresa{'s' if len(empresas_stats) > 1 else ''}</span>
@@ -620,6 +619,11 @@ with tab_pdf:
                         for w in warnings:
                             icon = "⚠️" if w['severidad'] == 'warning' else "ℹ️"
                             st.markdown(f"{icon} **{w['mensaje']}**")
+
+                # Detalle del procesamiento (al final)
+                with st.expander("📋 Detalle del procesamiento", expanded=False):
+                    for log_line in logs:
+                        st.text(log_line)
 
                 # Botones de descarga
                 col_dl1, col_dl2 = st.columns([3, 2])
@@ -780,10 +784,6 @@ with tab_excel:
                     periodos_permitidos = periodos_unicos[-3:]
                     df = df[df['Periodo'].isin(periodos_permitidos)]
 
-            with st.expander("📋 Detalle del procesamiento", expanded=False):
-                for log_line in logs:
-                    st.text(log_line)
-
             if excel_bytes:
                 increment_usage()
 
@@ -882,6 +882,11 @@ with tab_excel:
                         for w in warnings:
                             icon = "⚠️" if w['severidad'] == 'warning' else "ℹ️"
                             st.markdown(f"{icon} **{w['mensaje']}**")
+
+                # Detalle del procesamiento (al final)
+                with st.expander("📋 Detalle del procesamiento", expanded=False):
+                    for log_line in logs:
+                        st.text(log_line)
 
                 col_dl1, col_dl2 = st.columns([3, 2])
                 with col_dl1:
