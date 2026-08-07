@@ -6,6 +6,7 @@ Web app para extracción y consolidación de declaraciones SUNAT.
 import streamlit as st
 from streamlit_local_storage import LocalStorage
 from extractor import process_uploaded_pdfs, consolidate_uploaded_excels
+import time
 
 # ============================================================
 # CONFIGURACIÓN DE PÁGINA
@@ -302,7 +303,7 @@ st.markdown("""
 
 
 # ============================================================
-# SIDEBAR: CÓDIGO PRO (Compacto)
+# SIDEBAR: CÓDIGO PRO + ACCIONES (Compacto)
 # ============================================================
 with st.sidebar:
     if is_pro():
@@ -340,6 +341,14 @@ with st.sidebar:
             "**¿Acceso ilimitado?**\n\n"
             "📱 [WhatsApp](https://wa.me/51962927872?text=Hola%2C+quiero+un+código+Pro+de+ContaFlash)"
         )
+    
+    # Botón Nueva Carga (siempre visible)
+    st.markdown("---")
+    if st.session_state.get(PDF_RESULTS_KEY) is not None or st.session_state.get(EXCEL_RESULTS_KEY) is not None:
+        if st.button("🔄 Nueva Carga", key="btn_new_carga_sidebar", use_container_width=True):
+            st.session_state[PDF_RESULTS_KEY] = None
+            st.session_state[EXCEL_RESULTS_KEY] = None
+            st.rerun()
 
 # ============================================================
 # HEADER
@@ -424,16 +433,19 @@ with tab_pdf:
                 st.markdown("📧 **Email:** hola@contaflash.com")
         else:
             if st.button("🚀 Procesar archivos", key="btn_pdf", type="primary"):
+                _start_time = time.time()
                 with st.spinner("Procesando PDFs..."):
                     _results = process_uploaded_pdfs(uploaded_pdfs)
+                _elapsed = time.time() - _start_time
                 st.session_state[PDF_RESULTS_KEY] = _results
+                st.session_state["pdf_elapsed"] = _elapsed
 
         # Renderizar resultados desde session_state (persiste entre reruns)
         if st.session_state[PDF_RESULTS_KEY] is not None:
             excel_bytes, stats, logs, df = st.session_state[PDF_RESULTS_KEY]
 
-            # Mostrar logs
-            with st.expander("📋 Detalle del procesamiento", expanded=True):
+            # Mostrar logs (colapsado por defecto)
+            with st.expander("📋 Detalle del procesamiento", expanded=False):
                 for log_line in logs:
                     st.text(log_line)
 
@@ -446,10 +458,14 @@ with tab_pdf:
                 n_periodos = len(stats.get('periodos', []))
                 n_empresas = len(stats.get('empresas', []))
                 n_errores = stats['errors']
+                _elapsed = st.session_state.get("pdf_elapsed", 0)
+                elapsed_min = int(_elapsed // 60)
+                elapsed_sec = int(_elapsed % 60)
+                tiempo_real_str = f"{elapsed_min}min {elapsed_sec}seg" if elapsed_min > 0 else f"{elapsed_sec}seg"
                 tiempo_ahorrado_min = n_formularios * 30
                 horas = tiempo_ahorrado_min // 60
                 minutos = tiempo_ahorrado_min % 60
-                tiempo_str = f"{horas}h {minutos}min" if horas > 0 else f"{minutos}min"
+                tiempo_ahorrado_str = f"{horas}h {minutos}min" if horas > 0 else f"{minutos}min"
 
                 st.markdown(f"""
                 <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);
@@ -477,45 +493,111 @@ with tab_pdf:
                         </div>
                     </div>
                     <div style="background:rgba(46,204,113,0.15);border-radius:12px;padding:1rem;margin-top:1rem;text-align:center;">
-                        <div style="font-size:0.9rem;opacity:0.8;">Tiempo estimado ahorrado</div>
-                        <div style="font-size:1.8rem;font-weight:bold;color:#2ecc71;">⏱️ {tiempo_str}</div>
-                        <div style="font-size:0.8rem;opacity:0.6;">vs ~30 min por declaración manual</div>
+                        <div style="font-size:0.9rem;opacity:0.8;">Tiempo de procesamiento</div>
+                        <div style="font-size:1.8rem;font-weight:bold;color:#2ecc71;">⏱️ {tiempo_real_str}</div>
+                        <div style="font-size:0.8rem;opacity:0.6;">Ahorro estimado: ~{tiempo_ahorrado_str} vs manual</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
 
-                # Estadísticas del lote
-                totales = stats.get('totales', {})
-                if any(v != 0 for v in totales.values()):
-                    igv_ventas = totales.get('igv_ventas', 0)
-                    igv_compras = totales.get('igv_compras', 0)
-                    renta = totales.get('renta', 0)
-
+                # Estadísticas del lote por RUC
+                if 'RUC' in df.columns and 'Razon_Social' in df.columns:
                     def _fmt_soles(val):
                         if val == 0: return "S/ 0"
                         if abs(val) >= 1_000_000: return f"S/ {val/1_000_000:,.1f}M"
                         if abs(val) >= 1_000: return f"S/ {val/1_000:,.1f}K"
                         return f"S/ {val:,.2f}"
 
+                    # Agrupar por RUC
+                    empresas_stats = df.groupby(['RUC', 'Razon_Social']).agg({
+                        'C101': 'sum',
+                        'C108': 'sum',
+                        'C312': 'sum',
+                        'Periodo': 'nunique'
+                    }).reset_index()
+
+                    totales = {'C101': 0, 'C108': 0, 'C312': 0}
+
                     st.markdown(f"""
                     <div style="background:linear-gradient(135deg,#0f3460 0%,#16213e 100%);
-                                border-radius:12px;padding:1.5rem;margin:0.5rem 0;color:white;">
-                        <div style="text-align:center;margin-bottom:1rem;">
-                            <span style="font-size:1.2rem;">📈</span>
-                            <strong style="color:#e67e22;"> Estadísticas del Lote</strong>
+                                border-radius:12px;padding:1rem;margin:0.5rem 0;color:white;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem;">
+                            <span style="font-size:1rem;font-weight:700;color:#e67e22;">📊 Resumen por RUC</span>
+                            <span style="font-size:0.8rem;opacity:0.7;">{len(empresas_stats)} empresa{'s' if len(empresas_stats) > 1 else ''}</span>
                         </div>
-                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;">
-                            <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
-                                <div style="font-size:1.3rem;font-weight:bold;color:#2ecc71;">{_fmt_soles(igv_ventas)}</div>
-                                <div style="font-size:0.75rem;opacity:0.7;">IGV Ventas (C101)</div>
+                    """, unsafe_allow_html=True)
+
+                    for i, row in empresas_stats.iterrows():
+                        ruc = row['RUC']
+                        razon = row['Razon_Social']
+                        igv_ventas = row['C101']
+                        igv_compras = row['C108']
+                        renta = row['C312']
+                        n_periodos = row['Periodo']
+
+                        totales['C101'] += igv_ventas
+                        totales['C108'] += igv_compras
+                        totales['C312'] += renta
+
+                        neto_igv = igv_ventas - igv_compras
+                        neto_color = "#34d399" if neto_igv >= 0 else "#ef4444"
+                        neto_signo = "+" if neto_igv >= 0 else ""
+
+                        st.markdown(f"""
+                        <div style="background:rgba(255,255,255,0.08);border-radius:8px;padding:0.8rem;margin-bottom:0.5rem;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                                <span style="font-size:0.85rem;font-weight:600;color:#ffffff;">{razon}</span>
+                                <span style="font-size:0.75rem;color:rgba(255,255,255,0.6);">RUC: {ruc}</span>
                             </div>
-                            <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
-                                <div style="font-size:1.3rem;font-weight:bold;color:#e74c3c;">{_fmt_soles(igv_compras)}</div>
-                                <div style="font-size:0.75rem;opacity:0.7;">IGV Compras (C108)</div>
+                            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;">
+                                <div style="text-align:center;padding:0.3rem;background:rgba(255,255,255,0.05);border-radius:4px;">
+                                    <div style="font-size:0.9rem;font-weight:700;color:#2ecc71;">{_fmt_soles(igv_ventas)}</div>
+                                    <div style="font-size:0.65rem;color:rgba(255,255,255,0.6);">VENTAS</div>
+                                </div>
+                                <div style="text-align:center;padding:0.3rem;background:rgba(255,255,255,0.05);border-radius:4px;">
+                                    <div style="font-size:0.9rem;font-weight:700;color:#e74c3c;">{_fmt_soles(igv_compras)}</div>
+                                    <div style="font-size:0.65rem;color:rgba(255,255,255,0.6);">COMPRAS</div>
+                                </div>
+                                <div style="text-align:center;padding:0.3rem;background:rgba(255,255,255,0.05);border-radius:4px;">
+                                    <div style="font-size:0.9rem;font-weight:700;color:#f39c12;">{_fmt_soles(renta)}</div>
+                                    <div style="font-size:0.65rem;color:rgba(255,255,255,0.6);">RENTA</div>
+                                </div>
+                                <div style="text-align:center;padding:0.3rem;background:rgba(255,255,255,0.05);border-radius:4px;">
+                                    <div style="font-size:0.9rem;font-weight:700;color:{neto_color};">{neto_signo}{_fmt_soles(neto_igv)}</div>
+                                    <div style="font-size:0.65rem;color:rgba(255,255,255,0.6);">NETO</div>
+                                </div>
                             </div>
-                            <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem;text-align:center;">
-                                <div style="font-size:1.3rem;font-weight:bold;color:#f39c12;">{_fmt_soles(renta)}</div>
-                                <div style="font-size:0.75rem;opacity:0.7;">Renta (C312)</div>
+                            <div style="font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:0.3rem;text-align:right;">
+                                📅 {n_periodos} período{'s' if n_periodos > 1 else ''}
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                    # Totales consolidados
+                    neto_total = totales['C101'] - totales['C108']
+                    neto_total_color = "#34d399" if neto_total >= 0 else "#ef4444"
+                    neto_signo = "+" if neto_total >= 0 else ""
+
+                    st.markdown(f"""
+                        <div style="border-top:1px solid rgba(255,255,255,0.2);padding-top:0.8rem;margin-top:0.5rem;">
+                            <div style="font-size:0.8rem;font-weight:600;color:#34d399;margin-bottom:0.5rem;">✅ TOTALES CONSOLIDADOS</div>
+                            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;">
+                                <div style="text-align:center;padding:0.3rem;background:rgba(52,211,153,0.1);border-radius:4px;">
+                                    <div style="font-size:0.9rem;font-weight:700;color:#2ecc71;">{_fmt_soles(totales['C101'])}</div>
+                                    <div style="font-size:0.65rem;color:rgba(255,255,255,0.6);">VENTAS</div>
+                                </div>
+                                <div style="text-align:center;padding:0.3rem;background:rgba(52,211,153,0.1);border-radius:4px;">
+                                    <div style="font-size:0.9rem;font-weight:700;color:#e74c3c;">{_fmt_soles(totales['C108'])}</div>
+                                    <div style="font-size:0.65rem;color:rgba(255,255,255,0.6);">COMPRAS</div>
+                                </div>
+                                <div style="text-align:center;padding:0.3rem;background:rgba(52,211,153,0.1);border-radius:4px;">
+                                    <div style="font-size:0.9rem;font-weight:700;color:#f39c12;">{_fmt_soles(totales['C312'])}</div>
+                                    <div style="font-size:0.65rem;color:rgba(255,255,255,0.6);">RENTA</div>
+                                </div>
+                                <div style="text-align:center;padding:0.3rem;background:rgba(52,211,153,0.1);border-radius:4px;">
+                                    <div style="font-size:0.9rem;font-weight:700;color:{neto_total_color};">{neto_signo}{_fmt_soles(neto_total)}</div>
+                                    <div style="font-size:0.65rem;color:rgba(255,255,255,0.6);">A PAGAR</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -532,13 +614,8 @@ with tab_pdf:
                             icon = "⚠️" if w['severidad'] == 'warning' else "ℹ️"
                             st.markdown(f"{icon} **{w['mensaje']}**")
 
-                # Logs
-                with st.expander("📋 Detalle del procesamiento", expanded=False):
-                    for log_line in logs:
-                        st.text(log_line)
-
                 # Botones de descarga
-                col_dl1, col_dl2 = st.columns(2)
+                col_dl1, col_dl2 = st.columns([3, 2])
                 with col_dl1:
                     st.download_button(
                         label="📥 Descargar Excel Consolidado",
@@ -546,6 +623,7 @@ with tab_pdf:
                         file_name="ContaFlash_621_Consolidado.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         type="primary",
+                        use_container_width=True,
                     )
                 with col_dl2:
                     if df is not None:
@@ -555,6 +633,7 @@ with tab_pdf:
                             data=csv_bytes,
                             file_name="ContaFlash_621_Consolidado.csv",
                             mime="text/csv",
+                            use_container_width=True,
                         )
 
                 # Consolidación inteligente
@@ -602,7 +681,7 @@ with tab_pdf:
 
                     elif vista_pdf == "📆 Por Mes" and 'Periodo' in df.columns:
                         st.markdown("**Vista por Mes:**")
-                        df['_Mes'] = df['Periodo'].str[:7] if df['Periodo'].str.len() >= 7 else df['Periodo']
+                        df['_Mes'] = df['Periodo'].fillna('').astype(str).apply(lambda x: x[:7] if len(x) >= 7 else x)
                         for mes in sorted(df['_Mes'].dropna().unique()):
                             mes_df = df[df['_Mes'] == mes]
                             with st.expander(f"📆 {mes} ({len(mes_df)} declaración(es))"):
@@ -610,7 +689,14 @@ with tab_pdf:
                         if '_Mes' in df.columns:
                             df.drop('_Mes', axis=1, inplace=True)
 
-                st.success(f"✅ Te quedan {remaining_uses()} uso(s) gratuito(s).")
+                if is_pro():
+                    st.markdown(
+                        '<div class="usage-badge" style="background:#eafaf1">'
+                        '⚡ <strong style="color:#27ae60">Plan Pro — Uso ilimitado</strong></div>',
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.success(f"✅ Te quedan {remaining_uses()} uso(s) gratuito(s).")
                 st.markdown(
                     '💡 **¿Tienes otra tarea contable que te quite horas?** '
                     'Cuéntanos y te proponemos una solución. '
@@ -618,12 +704,6 @@ with tab_pdf:
                 )
             else:
                 st.error("No se pudieron extraer datos de los archivos proporcionados.")
-
-            # Botón Nueva Carga
-            st.markdown("---")
-            if st.button("🔄 Nueva Carga", key="btn_new_pdf"):
-                st.session_state[PDF_RESULTS_KEY] = None
-                st.rerun()
 
 
 # ─────────────────────────────────────────────────────────
@@ -673,17 +753,20 @@ with tab_excel:
                 st.markdown("📧 **Email:** hola@contaflash.com")
         else:
             if st.button("🚀 Consolidar archivos", key="btn_excel", type="primary"):
+                _start_time = time.time()
                 with st.spinner("Consolidando..."):
                     _results = consolidate_uploaded_excels(
                         uploaded_excels, empresa_name
                     )
+                _elapsed = time.time() - _start_time
                 st.session_state[EXCEL_RESULTS_KEY] = _results
+                st.session_state["excel_elapsed"] = _elapsed
 
         # Renderizar resultados desde session_state (persiste entre reruns)
         if st.session_state[EXCEL_RESULTS_KEY] is not None:
             excel_bytes, stats, logs, df = st.session_state[EXCEL_RESULTS_KEY]
 
-            with st.expander("📋 Detalle del procesamiento", expanded=True):
+            with st.expander("📋 Detalle del procesamiento", expanded=False):
                 for log_line in logs:
                     st.text(log_line)
 
@@ -696,10 +779,14 @@ with tab_excel:
                 n_periodos = len(stats.get('periodos', []))
                 n_empresas = stats.get('empresas', 1)
                 n_errores = stats['errors']
+                _elapsed = st.session_state.get("excel_elapsed", 0)
+                elapsed_min = int(_elapsed // 60)
+                elapsed_sec = int(_elapsed % 60)
+                tiempo_real_str = f"{elapsed_min}min {elapsed_sec}seg" if elapsed_min > 0 else f"{elapsed_sec}seg"
                 tiempo_ahorrado_min = n_formularios * 30
                 horas = tiempo_ahorrado_min // 60
                 minutos = tiempo_ahorrado_min % 60
-                tiempo_str = f"{horas}h {minutos}min" if horas > 0 else f"{minutos}min"
+                tiempo_ahorrado_str = f"{horas}h {minutos}min" if horas > 0 else f"{minutos}min"
 
                 st.markdown(f"""
                 <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);
@@ -727,9 +814,9 @@ with tab_excel:
                         </div>
                     </div>
                     <div style="background:rgba(46,204,113,0.15);border-radius:12px;padding:1rem;margin-top:1rem;text-align:center;">
-                        <div style="font-size:0.9rem;opacity:0.8;">Tiempo estimado ahorrado</div>
-                        <div style="font-size:1.8rem;font-weight:bold;color:#2ecc71;">⏱️ {tiempo_str}</div>
-                        <div style="font-size:0.8rem;opacity:0.6;">vs ~30 min por declaración manual</div>
+                        <div style="font-size:0.9rem;opacity:0.8;">Tiempo de procesamiento</div>
+                        <div style="font-size:1.8rem;font-weight:bold;color:#2ecc71;">⏱️ {tiempo_real_str}</div>
+                        <div style="font-size:0.8rem;opacity:0.6;">Ahorro estimado: ~{tiempo_ahorrado_str} vs manual</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -782,12 +869,7 @@ with tab_excel:
                             icon = "⚠️" if w['severidad'] == 'warning' else "ℹ️"
                             st.markdown(f"{icon} **{w['mensaje']}**")
 
-                # Logs
-                with st.expander("📋 Detalle del procesamiento", expanded=False):
-                    for log_line in logs:
-                        st.text(log_line)
-
-                col_dl1, col_dl2 = st.columns(2)
+                col_dl1, col_dl2 = st.columns([3, 2])
                 with col_dl1:
                     st.download_button(
                         label="📥 Descargar Consolidado",
@@ -795,6 +877,7 @@ with tab_excel:
                         file_name="ContaFlash_Consolidado_PDT621.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         type="primary",
+                        use_container_width=True,
                     )
                 with col_dl2:
                     if df is not None:
@@ -804,6 +887,7 @@ with tab_excel:
                             data=csv_bytes,
                             file_name="ContaFlash_Consolidado_PDT621.csv",
                             mime="text/csv",
+                            use_container_width=True,
                         )
 
                 # Consolidación inteligente
@@ -851,7 +935,7 @@ with tab_excel:
 
                     elif vista_excel == "📆 Por Mes" and 'Periodo' in df.columns:
                         st.markdown("**Vista por Mes:**")
-                        df['_Mes'] = df['Periodo'].str[:7] if df['Periodo'].str.len() >= 7 else df['Periodo']
+                        df['_Mes'] = df['Periodo'].fillna('').astype(str).apply(lambda x: x[:7] if len(x) >= 7 else x)
                         for mes in sorted(df['_Mes'].dropna().unique()):
                             mes_df = df[df['_Mes'] == mes]
                             with st.expander(f"📆 {mes} ({len(mes_df)} declaración(es))"):
@@ -859,7 +943,14 @@ with tab_excel:
                         if '_Mes' in df.columns:
                             df.drop('_Mes', axis=1, inplace=True)
 
-                st.success(f"✅ Te quedan {remaining_uses()} uso(s) gratuito(s).")
+                if is_pro():
+                    st.markdown(
+                        '<div class="usage-badge" style="background:#eafaf1">'
+                        '⚡ <strong style="color:#27ae60">Plan Pro — Uso ilimitado</strong></div>',
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.success(f"✅ Te quedan {remaining_uses()} uso(s) gratuito(s).")
                 st.markdown(
                     '💡 **¿Tienes otra tarea contable que te quite horas?** '
                     'Cuéntanos y te proponemos una solución. '
@@ -867,13 +958,6 @@ with tab_excel:
                 )
             else:
                 st.error("No se pudo consolidar. Verifica que los archivos tengan columnas 'Nro Casilla' y 'Valor Casilla'.")
-
-            # Botón Nueva Carga
-            st.markdown("---")
-            if st.button("🔄 Nueva Carga", key="btn_new_excel"):
-                st.session_state[EXCEL_RESULTS_KEY] = None
-                st.rerun()
-
 
 
 # ─────────────────────────────────────────────────────────
