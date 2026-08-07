@@ -435,7 +435,7 @@ with tab_pdf:
             if st.button("🚀 Procesar archivos", key="btn_pdf", type="primary"):
                 _start_time = time.time()
                 with st.spinner("Procesando PDFs..."):
-                    _results = process_uploaded_pdfs(uploaded_pdfs)
+                    _results = process_uploaded_pdfs(uploaded_pdfs, is_pro=is_pro())
                 _elapsed = time.time() - _start_time
                 st.session_state[PDF_RESULTS_KEY] = _results
                 st.session_state["pdf_elapsed"] = _elapsed
@@ -443,6 +443,13 @@ with tab_pdf:
         # Renderizar resultados desde session_state (persiste entre reruns)
         if st.session_state[PDF_RESULTS_KEY] is not None:
             excel_bytes, stats, logs, df = st.session_state[PDF_RESULTS_KEY]
+
+            # FILTRO FREE: Mostrar solo 3 períodos más recientes en vista
+            if df is not None and not is_pro() and 'Periodo' in df.columns:
+                periodos_unicos = sorted(df['Periodo'].dropna().unique())
+                if len(periodos_unicos) > 3:
+                    periodos_permitidos = periodos_unicos[-3:]
+                    df = df[df['Periodo'].isin(periodos_permitidos)]
 
             # Mostrar logs (colapsado por defecto)
             with st.expander("📋 Detalle del procesamiento", expanded=False):
@@ -756,7 +763,7 @@ with tab_excel:
                 _start_time = time.time()
                 with st.spinner("Consolidando..."):
                     _results = consolidate_uploaded_excels(
-                        uploaded_excels, empresa_name
+                        uploaded_excels, empresa_name, is_pro=is_pro()
                     )
                 _elapsed = time.time() - _start_time
                 st.session_state[EXCEL_RESULTS_KEY] = _results
@@ -765,6 +772,13 @@ with tab_excel:
         # Renderizar resultados desde session_state (persiste entre reruns)
         if st.session_state[EXCEL_RESULTS_KEY] is not None:
             excel_bytes, stats, logs, df = st.session_state[EXCEL_RESULTS_KEY]
+
+            # FILTRO FREE: Mostrar solo 3 períodos más recientes en vista
+            if df is not None and not is_pro() and 'Periodo' in df.columns:
+                periodos_unicos = sorted(df['Periodo'].dropna().unique())
+                if len(periodos_unicos) > 3:
+                    periodos_permitidos = periodos_unicos[-3:]
+                    df = df[df['Periodo'].isin(periodos_permitidos)]
 
             with st.expander("📋 Detalle del procesamiento", expanded=False):
                 for log_line in logs:

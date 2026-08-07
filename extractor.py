@@ -230,8 +230,20 @@ def _apply_excel_styles(ws, df):
         ws.freeze_panes = "C3"
 
 
-def _write_excel_bytes(df: pd.DataFrame, desc_row: dict, include_dict: bool = True) -> bytes:
+def _write_excel_bytes(df: pd.DataFrame, desc_row: dict, include_dict: bool = True,
+                       is_pro: bool = True, free_period_limit: int = 3) -> bytes:
     """Genera un Excel en memoria y retorna los bytes."""
+    from openpyxl.styles import Font
+
+    # FILTRO FREE: Solo 3 períodos más recientes
+    total_periodos = 0
+    if not is_pro and 'Periodo' in df.columns:
+        periodos_unicos = sorted(df['Periodo'].dropna().unique())
+        total_periodos = len(periodos_unicos)
+        if total_periodos > free_period_limit:
+            periodos_permitidos = periodos_unicos[-free_period_limit:]
+            df = df[df['Periodo'].isin(periodos_permitidos)]
+
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, sheet_name='Consolidado', index=False, startrow=1)
@@ -246,12 +258,31 @@ def _write_excel_bytes(df: pd.DataFrame, desc_row: dict, include_dict: bool = Tr
 
         _apply_excel_styles(ws, df)
 
+        # AVISO FREE: Agregar fila informativa al final
+        if not is_pro and total_periodos > free_period_limit:
+            last_row = len(df) + 3
+            aviso_text = (f"⚠️ MODO GRATUITO: Solo se muestran {free_periodos_limit} de {total_periodos} períodos. "
+                         f"Para ver todos los períodos, activa Plan Pro.")
+            ws.cell(row=last_row, column=1, value=aviso_text)
+            ws.cell(row=last_row, column=1).font = Font(bold=True, color="FF6600", size=10)
+            ws.merge_cells(start_row=last_row, start_column=1,
+                          end_row=last_row, end_column=min(5, len(df.columns)))
+
         if include_dict:
             dict_df = pd.DataFrame([
                 {'Casilla': code, 'Descripcion': desc}
                 for code, desc in sorted(CASILLAS.items(), key=lambda x: int(x[0]))
             ])
             dict_df.to_excel(writer, sheet_name='Diccionario_Casillas', index=False)
+
+        # Sheet de aviso para FREE
+        if not is_pro:
+            aviso_df = pd.DataFrame([{
+                'Aviso': '⚠️ PLAN GRATUITO - ContaFlash',
+                'Detalle': (f'Esta exportación contiene solo {free_period_limit} de {total_periodos} períodos. '
+                           f'Para acceso completo, contacta: https://wa.me/51962927872')
+            }])
+            aviso_df.to_excel(writer, sheet_name='Aviso_Plan_Gratuito', index=False)
 
     return output.getvalue()
 
@@ -323,7 +354,7 @@ def validate_dataframe(df: pd.DataFrame) -> list:
 # ============================================================
 # FUNCIÓN PRINCIPAL: Procesar PDFs desde archivos subidos
 # ============================================================
-def process_uploaded_pdfs(uploaded_files: list) -> tuple:
+def process_uploaded_pdfs(uploaded_files: list, is_pro: bool = True) -> tuple:
     """
     Procesa una lista de PDFs/ZIPs subidos.
     Retorna (excel_bytes, stats_dict, log_messages).
@@ -372,7 +403,7 @@ def process_uploaded_pdfs(uploaded_files: list) -> tuple:
     df = pd.DataFrame(records)
     df = _order_columns(df)
     desc_row = _build_description_row()
-    excel_bytes = _write_excel_bytes(df, desc_row)
+    excel_bytes = _write_excel_bytes(df, desc_row, is_pro=is_pro)
 
     # Calcular totales financieros
     def _safe_sum(col):
@@ -393,6 +424,7 @@ def process_uploaded_pdfs(uploaded_files: list) -> tuple:
             'igv_compras': _safe_sum('C108'),
             'renta': _safe_sum('C312'),
         },
+        'is_pro': is_pro,
     }
     return excel_bytes, stats, logs, df
 
@@ -469,7 +501,8 @@ def _parse_uploaded_excel(file_bytes: bytes, filename: str, empresa: str) -> tup
         return None, {'empresa': empresa, 'archivo': filename, 'error': str(e)}
 
 
-def consolidate_uploaded_excels(uploaded_files: list, empresa_name: str = "Mi Empresa") -> tuple:
+def consolidate_uploaded_excels(uploaded_files: list, empresa_name: str = "Mi Empresa",
+                                is_pro: bool = True, free_period_limit: int = 3) -> tuple:
     """
     Consolida Excels/CSVs subidos del PDT 621.
     Retorna (excel_bytes, stats_dict, log_messages).
@@ -497,6 +530,16 @@ def consolidate_uploaded_excels(uploaded_files: list, empresa_name: str = "Mi Em
         return None, {'total': 0, 'ok': 0, 'errors': len(errors)}, logs
 
     df = pd.DataFrame(records)
+
+    # FILTRO FREE: Solo 3 períodos más recientes
+    total_periodos = 0
+    if not is_pro and 'Periodo' in df.columns:
+        periodos_unicos = sorted(df['Periodo'].dropna().unique())
+        total_periodos = len(periodos_unicos)
+        if total_periodos > free_period_limit:
+            periodos_permitidos = periodos_unicos[-free_period_limit:]
+            df = df[df['Periodo'].isin(periodos_permitidos)]
+            logs.append(f"ℹ️ Plan gratuito: Solo {free_period_limit} de {total_periodos} períodos incluidos")
 
     header_cols = ['Empresa', 'Archivo_Origen', 'RUC', 'Razon_Social', 'Periodo',
                    'Fecha_Presentacion', 'Tipo_Declaracion', 'Tipo_Moneda', 'Numero_Orden']
@@ -557,6 +600,15 @@ def consolidate_uploaded_excels(uploaded_files: list, empresa_name: str = "Mi Em
             err_df = pd.DataFrame(errors)
             err_df.to_excel(writer, sheet_name='Errores', index=False)
 
+        # AVISO FREE: Agregar sheet informativo
+        if not is_pro and total_periodos > free_period_limit:
+            aviso_df = pd.DataFrame([{
+                'Aviso': '⚠️ PLAN GRATUITO - ContaFlash',
+                'Detalle': (f'Esta consolidación contiene solo {free_period_limit} de {total_periodos} períodos. '
+                           f'Para acceso completo, contacta: https://wa.me/51962927872')
+            }])
+            aviso_df.to_excel(writer, sheet_name='Aviso_Plan_Gratuito', index=False)
+
     def _safe_sum(col):
         if col in df.columns:
             return pd.to_numeric(df[col], errors='coerce').sum()
@@ -568,6 +620,7 @@ def consolidate_uploaded_excels(uploaded_files: list, empresa_name: str = "Mi Em
         'errors': len(errors),
         'empresas': len(empresas),
         'periodos': sorted(df['Periodo'].dropna().unique().tolist()),
+        'periodos_total': total_periodos if not is_pro else len(df['Periodo'].dropna().unique()),
         'n_casillas': len(casilla_cols),
         'warnings': validate_dataframe(df),
         'totales': {
@@ -575,5 +628,6 @@ def consolidate_uploaded_excels(uploaded_files: list, empresa_name: str = "Mi Em
             'igv_compras': _safe_sum('C108'),
             'renta': _safe_sum('C312'),
         },
+        'is_pro': is_pro,
     }
     return output.getvalue(), stats, logs, df
