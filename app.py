@@ -525,11 +525,11 @@ with tab_pdf:
                     totales = {'C101': 0, 'C108': 0, 'C312': 0}
 
                     st.markdown(f"""
-                    <div style="background:linear-gradient(135deg,#0f3460 0%,#16213e 100%);
-                                border-radius:12px;padding:1rem;margin:0.5rem 0 1.5rem 0;color:white;">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem;">
-                            <span style="font-size:1rem;font-weight:700;color:#e67e22;">📊 Resumen por RUC</span>
-                            <span style="font-size:0.8rem;opacity:0.7;">{len(empresas_stats)} empresa{'s' if len(empresas_stats) > 1 else ''}</span>
+                    <div style="background:#1e3a5f;
+                                border-radius:10px;padding:0.8rem;margin:0.5rem 0 1rem 0;color:white;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;">
+                            <span style="font-size:0.85rem;font-weight:700;color:#d4880f;">📊 Resumen por RUC</span>
+                            <span style="font-size:0.7rem;opacity:0.8;">{len(empresas_stats)} empresa{'s' if len(empresas_stats) > 1 else ''}</span>
                         </div>
                     """, unsafe_allow_html=True)
 
@@ -550,30 +550,30 @@ with tab_pdf:
                         neto_signo = "+" if neto_igv >= 0 else ""
 
                         st.markdown(f"""
-                        <div style="background:rgba(255,255,255,0.08);border-radius:8px;padding:0.8rem;margin-bottom:0.5rem;">
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
-                                <span style="font-size:0.85rem;font-weight:600;color:#ffffff;">{razon}</span>
-                                <span style="font-size:0.75rem;color:rgba(255,255,255,0.6);">RUC: {ruc}</span>
+                        <div style="background:#f5f0e8;border-radius:6px;padding:0.5rem;margin-bottom:0.4rem;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.3rem;">
+                                <span style="font-size:0.75rem;font-weight:600;color:#2d2a26;">{razon}</span>
+                                <span style="font-size:0.65rem;color:#6b6560;">RUC: {ruc}</span>
                             </div>
-                            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;">
-                                <div style="text-align:center;padding:0.3rem;background:rgba(255,255,255,0.05);border-radius:4px;">
-                                    <div style="font-size:0.9rem;font-weight:700;color:#2ecc71;">{_fmt_soles(igv_ventas)}</div>
-                                    <div style="font-size:0.65rem;color:rgba(255,255,255,0.6);">VENTAS</div>
+                            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.3rem;">
+                                <div style="text-align:center;padding:0.2rem;background:#faf7f2;border-radius:4px;">
+                                    <div style="font-size:0.75rem;font-weight:700;color:#27ae60;">{_fmt_soles(igv_ventas)}</div>
+                                    <div style="font-size:0.55rem;color:#6b6560;">VENTAS</div>
                                 </div>
-                                <div style="text-align:center;padding:0.3rem;background:rgba(255,255,255,0.05);border-radius:4px;">
-                                    <div style="font-size:0.9rem;font-weight:700;color:#e74c3c;">{_fmt_soles(igv_compras)}</div>
-                                    <div style="font-size:0.65rem;color:rgba(255,255,255,0.6);">COMPRAS</div>
+                                <div style="text-align:center;padding:0.2rem;background:#faf7f2;border-radius:4px;">
+                                    <div style="font-size:0.75rem;font-weight:700;color:#e74c3c;">{_fmt_soles(igv_compras)}</div>
+                                    <div style="font-size:0.55rem;color:#6b6560;">COMPRAS</div>
                                 </div>
-                                <div style="text-align:center;padding:0.3rem;background:rgba(255,255,255,0.05);border-radius:4px;">
-                                    <div style="font-size:0.9rem;font-weight:700;color:#f39c12;">{_fmt_soles(renta)}</div>
-                                    <div style="font-size:0.65rem;color:rgba(255,255,255,0.6);">RENTA</div>
+                                <div style="text-align:center;padding:0.2rem;background:#faf7f2;border-radius:4px;">
+                                    <div style="font-size:0.75rem;font-weight:700;color:#d4880f;">{_fmt_soles(renta)}</div>
+                                    <div style="font-size:0.55rem;color:#6b6560;">RENTA</div>
                                 </div>
-                                <div style="text-align:center;padding:0.3rem;background:rgba(255,255,255,0.05);border-radius:4px;">
-                                    <div style="font-size:0.9rem;font-weight:700;color:{neto_color};">{neto_signo}{_fmt_soles(neto_igv)}</div>
-                                    <div style="font-size:0.65rem;color:rgba(255,255,255,0.6);">NETO</div>
+                                <div style="text-align:center;padding:0.2rem;background:#faf7f2;border-radius:4px;">
+                                    <div style="font-size:0.75rem;font-weight:700;color:{neto_color};">{neto_signo}{_fmt_soles(neto_igv)}</div>
+                                    <div style="font-size:0.55rem;color:#6b6560;">NETO</div>
                                 </div>
                             </div>
-                            <div style="font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:0.3rem;text-align:right;">
+                            <div style="font-size:0.6rem;color:#6b6560;margin-top:0.2rem;text-align:right;">
                                 📅 {n_periodos} período{'s' if n_periodos > 1 else ''}
                             </div>
                         </div>
@@ -581,33 +581,35 @@ with tab_pdf:
 
                     # Totales consolidados
                     neto_total = totales['C101'] - totales['C108']
-                    neto_total_color = "#34d399" if neto_total >= 0 else "#ef4444"
+                    neto_total_color = "#27ae60" if neto_total >= 0 else "#e74c3c"
                     neto_signo = "+" if neto_total >= 0 else ""
 
                     st.markdown(f"""
-                        <div style="border-top:1px solid rgba(255,255,255,0.2);padding-top:0.8rem;margin-top:0.5rem;">
-                            <div style="font-size:0.8rem;font-weight:600;color:#34d399;margin-bottom:0.5rem;">✅ TOTALES CONSOLIDADOS</div>
-                            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;">
-                                <div style="text-align:center;padding:0.3rem;background:rgba(52,211,153,0.1);border-radius:4px;">
-                                    <div style="font-size:0.9rem;font-weight:700;color:#2ecc71;">{_fmt_soles(totales['C101'])}</div>
-                                    <div style="font-size:0.65rem;color:rgba(255,255,255,0.6);">VENTAS</div>
+                        <div style="border-top:1px solid #d4880f;padding-top:0.6rem;margin-top:0.4rem;">
+                            <div style="font-size:0.7rem;font-weight:600;color:#27ae60;margin-bottom:0.4rem;">✅ TOTALES CONSOLIDADOS</div>
+                            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.3rem;">
+                                <div style="text-align:center;padding:0.2rem;background:#eafaf1;border-radius:4px;">
+                                    <div style="font-size:0.75rem;font-weight:700;color:#27ae60;">{_fmt_soles(totales['C101'])}</div>
+                                    <div style="font-size:0.55rem;color:#2d2a26;">VENTAS</div>
                                 </div>
-                                <div style="text-align:center;padding:0.3rem;background:rgba(52,211,153,0.1);border-radius:4px;">
-                                    <div style="font-size:0.9rem;font-weight:700;color:#e74c3c;">{_fmt_soles(totales['C108'])}</div>
-                                    <div style="font-size:0.65rem;color:rgba(255,255,255,0.6);">COMPRAS</div>
+                                <div style="text-align:center;padding:0.2rem;background:#fdeaea;border-radius:4px;">
+                                    <div style="font-size:0.75rem;font-weight:700;color:#e74c3c;">{_fmt_soles(totales['C108'])}</div>
+                                    <div style="font-size:0.55rem;color:#2d2a26;">COMPRAS</div>
                                 </div>
-                                <div style="text-align:center;padding:0.3rem;background:rgba(52,211,153,0.1);border-radius:4px;">
-                                    <div style="font-size:0.9rem;font-weight:700;color:#f39c12;">{_fmt_soles(totales['C312'])}</div>
-                                    <div style="font-size:0.65rem;color:rgba(255,255,255,0.6);">RENTA</div>
+                                <div style="text-align:center;padding:0.2rem;background:#fef9e7;border-radius:4px;">
+                                    <div style="font-size:0.75rem;font-weight:700;color:#d4880f;">{_fmt_soles(totales['C312'])}</div>
+                                    <div style="font-size:0.55rem;color:#2d2a26;">RENTA</div>
                                 </div>
-                                <div style="text-align:center;padding:0.3rem;background:rgba(52,211,153,0.1);border-radius:4px;">
-                                    <div style="font-size:0.9rem;font-weight:700;color:{neto_total_color};">{neto_signo}{_fmt_soles(neto_total)}</div>
-                                    <div style="font-size:0.65rem;color:rgba(255,255,255,0.6);">A PAGAR</div>
+                                <div style="text-align:center;padding:0.2rem;background:#eafaf1;border-radius:4px;">
+                                    <div style="font-size:0.75rem;font-weight:700;color:{neto_total_color};">{neto_signo}{_fmt_soles(neto_total)}</div>
+                                    <div style="font-size:0.55rem;color:#2d2a26;">A PAGAR</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
+                    
+                    st.write("")
 
                 if n_errores > 0:
                     st.warning(f"⚠️ {n_errores} archivo(s) con errores — revisa el detalle abajo")
