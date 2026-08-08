@@ -4,7 +4,13 @@ Web app para extracción y consolidación de declaraciones SUNAT.
 """
 
 import streamlit as st
-from streamlit_local_storage import LocalStorage
+try:
+    from streamlit_local_storage import LocalStorage
+    _local_storage = LocalStorage()
+    _HAS_LOCAL_STORAGE = True
+except Exception:
+    _local_storage = None
+    _HAS_LOCAL_STORAGE = False
 from extractor import process_uploaded_pdfs, consolidate_uploaded_excels
 import time
 
@@ -44,26 +50,35 @@ if EXCEL_RESULTS_KEY not in st.session_state:
 # ============================================================
 # PERSISTENCIA — localStorage
 # ============================================================
-_local_storage = LocalStorage()
 PERSIST_KEY = "contaflash_state"
 
 
 def _load_state():
     """Restaura estado desde localStorage al iniciar."""
-    saved = _local_storage.getItem(PERSIST_KEY)
-    if saved:
-        st.session_state[USAGE_KEY] = saved.get("usage", 0)
-        st.session_state[PRO_KEY] = saved.get("pro", False)
-        st.session_state[PRO_CLIENT_KEY] = saved.get("client", "")
+    if not _HAS_LOCAL_STORAGE:
+        return
+    try:
+        saved = _local_storage.getItem(PERSIST_KEY)
+        if saved:
+            st.session_state[USAGE_KEY] = saved.get("usage", 0)
+            st.session_state[PRO_KEY] = saved.get("pro", False)
+            st.session_state[PRO_CLIENT_KEY] = saved.get("client", "")
+    except Exception:
+        pass
 
 
 def _save_state():
     """Persiste estado actual a localStorage."""
-    _local_storage.setItem(PERSIST_KEY, {
-        "usage": st.session_state[USAGE_KEY],
-        "pro": st.session_state[PRO_KEY],
-        "client": st.session_state[PRO_CLIENT_KEY],
-    })
+    if not _HAS_LOCAL_STORAGE:
+        return
+    try:
+        _local_storage.setItem(PERSIST_KEY, {
+            "usage": st.session_state[USAGE_KEY],
+            "pro": st.session_state[PRO_KEY],
+            "client": st.session_state[PRO_CLIENT_KEY],
+        })
+    except Exception:
+        pass
 
 
 _load_state()
