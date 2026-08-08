@@ -261,7 +261,7 @@ def _write_excel_bytes(df: pd.DataFrame, desc_row: dict, include_dict: bool = Tr
         # AVISO FREE: Agregar fila informativa al final
         if not is_pro and total_periodos > free_period_limit:
             last_row = len(df) + 3
-            aviso_text = (f"⚠️ MODO GRATUITO: Solo se muestran {free_periodos_limit} de {total_periodos} períodos. "
+            aviso_text = (f"⚠️ MODO GRATUITO: Solo se muestran {free_period_limit} de {total_periodos} períodos. "
                          f"Para ver todos los períodos, activa Plan Pro.")
             ws.cell(row=last_row, column=1, value=aviso_text)
             ws.cell(row=last_row, column=1).font = Font(bold=True, color="FF6600", size=10)
