@@ -142,17 +142,63 @@ def extract_casillas(full_text: str) -> dict:
     return casilla_values
 
 
-def extract_pdf_bytes(pdf_bytes: bytes, filename: str) -> dict:
-    """Extrae datos de un PDF en memoria (bytes)."""
-    with pdfplumber.open(BytesIO(pdf_bytes)) as pdf:
-        full_text = '\n'.join(
-            page.extract_text() or '' for page in pdf.pages
+def _group_declaration_pages(page_texts: list) -> list:
+    """Agrupa páginas consecutivas que pertenecen a la misma declaración."""
+    identity_fields = ('RUC', 'Periodo', 'Numero_Orden', 'Tipo_Declaracion')
+    grouped_texts = []
+    current_pages = []
+    current_identity = {}
+
+    for page_text in page_texts:
+        page_identity = extract_header(page_text)
+        identity_conflicts = any(
+            current_identity.get(field)
+            and page_identity.get(field)
+            and current_identity[field] != page_identity[field]
+            for field in identity_fields
         )
-    header = extract_header(full_text)
-    casillas = extract_casillas(full_text)
-    record = {**header, **{f'C{k}': v for k, v in casillas.items()}}
-    record['Archivo_Origen'] = filename
-    return record
+
+        if current_pages and identity_conflicts:
+            grouped_texts.append('\n'.join(current_pages))
+            current_pages = []
+            current_identity = {}
+
+        current_pages.append(page_text)
+        for field in identity_fields:
+            if not current_identity.get(field) and page_identity.get(field):
+                current_identity[field] = page_identity[field]
+
+    if current_pages:
+        grouped_texts.append('\n'.join(current_pages))
+
+    return grouped_texts
+
+
+def extract_pdf_records(pdf_bytes: bytes, filename: str) -> list:
+    """Extrae una fila por cada declaración incluida en un PDF."""
+    with pdfplumber.open(BytesIO(pdf_bytes)) as pdf:
+        page_texts = [page.extract_text() or '' for page in pdf.pages]
+
+    records = []
+    for full_text in _group_declaration_pages(page_texts):
+        header = extract_header(full_text)
+        casillas = extract_casillas(full_text)
+        record = {**header, **{f'C{k}': v for k, v in casillas.items()}}
+        record['Archivo_Origen'] = filename
+        records.append(record)
+
+    return records
+
+
+def extract_pdf_bytes(pdf_bytes: bytes, filename: str) -> dict:
+    """Extrae un único formulario; rechaza PDFs con múltiples declaraciones."""
+    records = extract_pdf_records(pdf_bytes, filename)
+    if len(records) != 1:
+        raise ValueError(
+            f"El PDF contiene {len(records)} declaraciones; "
+            "usa extract_pdf_records para procesarlas todas."
+        )
+    return records[0]
 
 
 def _build_description_row() -> dict:
@@ -363,6 +409,19 @@ def process_uploaded_pdfs(uploaded_files: list, is_pro: bool = True) -> tuple:
     errors = []
     logs = []
 
+    def add_pdf_records(pdf_bytes: bytes, filename: str, prefix: str = '') -> None:
+        pdf_records = extract_pdf_records(pdf_bytes, filename)
+        if not pdf_records:
+            raise ValueError("No se encontraron declaraciones en el PDF")
+        records.extend(pdf_records)
+
+        periods = sorted({record.get('Periodo', '') for record in pdf_records if record.get('Periodo')})
+        if len(pdf_records) == 1:
+            logs.append(f"{prefix}✅ {filename} — Período {pdf_records[0].get('Periodo', '?')}")
+        else:
+            period_range = f"{periods[0]} a {periods[-1]}" if periods else "períodos no identificados"
+            logs.append(f"{prefix}✅ {filename} — {len(pdf_records)} declaraciones ({period_range})")
+
     for uploaded in uploaded_files:
         file_bytes = uploaded.read()
         filename = uploaded.name
@@ -376,9 +435,7 @@ def process_uploaded_pdfs(uploaded_files: list, is_pro: bool = True) -> tuple:
                 for pdf_path in Path(tmp_dir).rglob('*.pdf'):
                     try:
                         pdf_bytes = pdf_path.read_bytes()
-                        record = extract_pdf_bytes(pdf_bytes, pdf_path.name)
-                        records.append(record)
-                        logs.append(f"  ✅ {pdf_path.name} — Período {record.get('Periodo', '?')}")
+                        add_pdf_records(pdf_bytes, pdf_path.name, prefix='  ')
                     except Exception as e:
                         errors.append({'archivo': pdf_path.name, 'error': str(e)})
                         logs.append(f"  ❌ {pdf_path.name} — {e}")
@@ -390,9 +447,7 @@ def process_uploaded_pdfs(uploaded_files: list, is_pro: bool = True) -> tuple:
 
         elif filename.lower().endswith('.pdf'):
             try:
-                record = extract_pdf_bytes(file_bytes, filename)
-                records.append(record)
-                logs.append(f"✅ {filename} — Período {record.get('Periodo', '?')}")
+                add_pdf_records(file_bytes, filename)
             except Exception as e:
                 errors.append({'archivo': filename, 'error': str(e)})
                 logs.append(f"❌ {filename} — {e}")

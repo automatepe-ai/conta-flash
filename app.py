@@ -502,7 +502,7 @@ with tab_pdf:
                         </div>
                         <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
                             <div style="font-size:2rem;font-weight:bold;color:#2ecc71;">{n_casillas}</div>
-                            <div style="font-size:0.85rem;opacity:0.8;">Registros extraídos</div>
+                            <div style="font-size:0.85rem;opacity:0.8;">Casillas en reporte</div>
                         </div>
                         <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
                             <div style="font-size:2rem;font-weight:bold;color:#3498db;">{n_empresas}</div>
@@ -833,7 +833,7 @@ with tab_excel:
                         </div>
                         <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
                             <div style="font-size:2rem;font-weight:bold;color:#2ecc71;">{n_casillas}</div>
-                            <div style="font-size:0.85rem;opacity:0.8;">Registros extraídos</div>
+                            <div style="font-size:0.85rem;opacity:0.8;">Casillas en reporte</div>
                         </div>
                         <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:1rem;text-align:center;">
                             <div style="font-size:2rem;font-weight:bold;color:#3498db;">{n_empresas}</div>
